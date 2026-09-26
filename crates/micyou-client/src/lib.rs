@@ -71,7 +71,7 @@ enum Transport {
                     tokio_tungstenite::WebSocketStream<
                         tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
                     >,
-                    tokio_tungstenite::Message,
+                    tokio_tungstenite::tungstenite::Message,
                 >,
             >,
         >,
