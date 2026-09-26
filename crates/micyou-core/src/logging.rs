@@ -153,6 +153,48 @@ pub fn export_log(dest_dir: Option<PathBuf>) -> std::io::Result<PathBuf> {
     Ok(dest)
 }
 
+struct StderrLogger {
+    level: LevelFilter,
+}
+
+impl log::Log for StderrLogger {
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= self.level
+    }
+
+    fn log(&self, record: &Record) {
+        if !self.enabled(record.metadata()) {
+            return;
+        }
+        let _ = writeln!(
+            std::io::stderr(),
+            "[{} {:>5} {}] {}",
+            humantime(record),
+            record.level(),
+            record.target(),
+            record.args()
+        );
+    }
+
+    fn flush(&self) {}
+}
+
+fn humantime(_record: &Record) -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+/// Initialize stderr-only logging (no file). Used when file logging is
+/// disabled (tests, ephemeral runs). `force` enables output even for the
+/// no-op case so callers can rely on the level filter.
+pub fn init_stderr_only(level: LevelFilter, _force: bool) {
+    let logger = Box::new(StderrLogger { level });
+    let _ = log::set_boxed_logger(logger);
+    log::set_max_level(level);
+}
+
 /// Parse a `log` level name ("info", "debug", …) for CLI flags.
 pub fn parse_level(value: &str) -> Option<LevelFilter> {
     match value.trim().to_ascii_lowercase().as_str() {

@@ -81,6 +81,16 @@ pub struct SessionInfo {
     pub arch: String,
 }
 
+/// Optional params of `session/hello`: client identity + capabilities.
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[serde(rename_all = "camelCase", default)]
+pub struct HelloParams {
+    /// Human-readable client name (logs, diagnostics).
+    pub name: Option<String>,
+    /// Client can render plugin panels / handle `uiRequest` events.
+    pub ui: Option<bool>,
+}
+
 /// Params of `session/subscribe` / `session/unsubscribe`.
 ///
 /// Filters are event tags or tag prefixes (`"audio*"` matches audioLevel,
@@ -366,6 +376,14 @@ pub struct PluginPreview {
     pub license: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub homepage: Option<String>,
+}
+
+/// Params of `plugins/preview/zip`.
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginPreviewZipParams {
+    /// Absolute path of the plugin zip on the backend host.
+    pub path: String,
 }
 
 /// Params of `plugins/preview/url`.

@@ -17,5 +17,4 @@ micyou-core.workspace = true
 micyou-rpc.workspace = true
 clap.workspace = true
 tokio.workspace = true
-serde_json.workspace = true
 log.workspace = true

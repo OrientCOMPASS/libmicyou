@@ -2067,9 +2067,6 @@ dependencies = [
  "micyou-protocol",
  "micyou-rpc",
  "micyou-transport",
- "serde",
- "serde_json",
- "tokio",
 ]
 
 [[package]]
@@ -2221,7 +2218,6 @@ name = "micyou-api"
 version = "0.1.0"
 dependencies = [
  "micyou-audio",
- "micyou-core",
  "micyou-plugin",
  "micyou-transport",
  "serde",
@@ -2237,6 +2233,7 @@ dependencies = [
  "micyou-protocol",
  "ndarray",
  "nnnoiseless",
+ "opus-decoder",
  "ort",
  "ringbuf",
  "rubato",
@@ -2270,6 +2267,7 @@ dependencies = [
  "libc",
  "log",
  "md-5",
+ "micyou-api",
  "micyou-audio",
  "micyou-plugin",
  "micyou-protocol",
@@ -2296,7 +2294,6 @@ dependencies = [
  "log",
  "micyou-core",
  "micyou-rpc",
- "serde_json",
  "tokio",
 ]
 
@@ -2327,7 +2324,6 @@ dependencies = [
  "prost",
  "prost-build",
  "protoc-bin-vendored",
- "serde",
 ]
 
 [[package]]
@@ -2339,11 +2335,10 @@ dependencies = [
  "log",
  "micyou-api",
  "micyou-core",
+ "micyou-plugin",
  "serde",
  "serde_json",
  "tokio",
- "tokio-stream",
- "tokio-util",
 ]
 
 [[package]]
@@ -2351,19 +2346,17 @@ name = "micyou-transport"
 version = "0.1.0"
 dependencies = [
  "axum",
- "bytes",
  "hostname",
+ "libc",
  "local-ip-address",
  "log",
  "mdns-sd",
  "micyou-protocol",
- "opus-decoder",
  "prost",
  "rcgen",
  "rustls",
  "rustls-pemfile",
  "serde",
- "serde_json",
  "socket2",
  "tokio",
  "tokio-rustls",
@@ -4002,17 +3995,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b0c85f2c3ef0b1cd58b36682f4b17aaa995f0e5db534d85692b4903abce21f67"
 dependencies = [
  "rustls",
- "tokio",
-]
-
-[[package]]
-name = "tokio-stream"
-version = "0.1.19"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3d06f0b082ba57c26b79407372e57cf2a1e28124f78e9479fe80322cf53420b"
-dependencies = [
- "futures-core",
- "pin-project-lite",
  "tokio",
 ]
 

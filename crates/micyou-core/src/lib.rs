@@ -20,6 +20,8 @@
 //!
 //! - [`server`] — [`server::ServerCore`]: the shared runtime and the
 //!   start/stop transactions (this is the heart of the backend).
+//! - [`service`] — [`service::Backend`]: the facade implementing every RPC
+//!   method (server/audio/network/config/devices/plugins/system).
 //! - [`lifecycle`] — start/stop state machine with bounded audio-thread join.
 //! - [`pipeline`] — the dedicated audio thread: jitter buffer → decode →
 //!   resample → DSP chain → virtual mic output.
@@ -47,6 +49,7 @@ pub mod platform;
 pub mod plugins;
 pub mod resources;
 pub mod server;
+pub mod service;
 pub mod sound;
 
 pub use audio_output::AudioOutputHandle;
@@ -54,6 +57,7 @@ pub use events::{AecStatus, CoreTransportBridge, EventBus, ServerEvent, UiReques
 pub use lifecycle::{ServerLifecyclePhase, ServerLifecycleState};
 pub use plugins::{PluginHost, UiBridge, UiBridgeSlot};
 pub use server::{ServerCore, StartParams};
+pub use service::Backend;
 
 /// Convenience re-exports for RPC/service layers.
 pub mod prelude {

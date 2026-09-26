@@ -34,7 +34,11 @@ pub struct AecStatus {
 /// frontend is expected to handle these; the backend errors on the
 /// corresponding request methods when no frontend is attached.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 pub enum UiRequest {
     /// Open a plugin's panel in a frontend-owned window.
     OpenPluginPanel { plugin_id: String, panel_id: String },
@@ -42,7 +46,12 @@ pub enum UiRequest {
 
 /// Events published by the backend core.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", content = "data", rename_all = "camelCase")]
+#[serde(
+    tag = "type",
+    content = "data",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 pub enum ServerEvent {
     /// A device (phone/web client) became the active audio source.
     DeviceConnected { device: DeviceInfo },

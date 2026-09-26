@@ -1,15 +1,27 @@
 /*
  * libmicyou — headless, frontend-decoupled backend for MicYou.
- * Derived from MicYou <https://github.com/LanRhyme/MicYou>.
  *
- * Copyright (C) 2026 LanRhyme (original MicYou)
  * Copyright (C) 2026 OrientCOMPASS (libmicyou refactor)
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version, with the MicYou Plugin Exception.
- * See LICENSE for details.
+ * GPL-3.0-or-later with the MicYou Plugin Exception. See LICENSE.
  */
 
-//! MicYou JSON-RPC 2.0 layer: routing, sessions, subscriptions, transports.
+//! MicYou JSON-RPC 2.0 layer.
+//!
+//! - [`router::RpcService`] — method dispatch + event pump (transport-agnostic).
+//! - [`session`] — per-frontend sessions with event subscription filters.
+//! - [`stdio`] — newline-delimited JSON over stdin/stdout (sidecar deployments).
+//! - [`ws`] — WebSocket transport (`ws://addr/rpc`) for browser/remote clients.
+//! - [`local`] — in-process duplex channel transport for embedded Rust hosts
+//!   (a Tauri backend, CLI or TUI can drive the daemon without sockets).
+//! - [`ui`] — UI-request delegation to attached graphical frontends.
+
+pub mod local;
+pub mod router;
+pub mod session;
+pub mod stdio;
+pub mod ui;
+pub mod ws;
+
+pub use router::RpcService;
+pub use session::{Session, SessionHandle, SessionRegistry};

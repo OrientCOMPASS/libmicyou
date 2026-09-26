@@ -10,11 +10,10 @@ repository.workspace = true
 [dependencies]
 micyou-api.workspace = true
 micyou-core.workspace = true
+micyou-plugin.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
-tokio-util.workspace = true
-tokio-stream.workspace = true
 futures-util.workspace = true
 log.workspace = true
 axum.workspace = true
