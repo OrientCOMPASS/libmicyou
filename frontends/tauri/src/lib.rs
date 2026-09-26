@@ -80,6 +80,31 @@ async fn backend_set_monitoring(state: State<'_, AppState>, enabled: bool) -> Re
         .map_err(|e| e.to_string())
 }
 
+/// Generic JSON-RPC pass-through: the webview drives the entire backend
+/// contract through this single command (params/result are raw JSON).
+#[tauri::command]
+async fn backend_call(
+    state: State<'_, AppState>,
+    method: String,
+    params: Option<serde_json::Value>,
+) -> Result<serde_json::Value, String> {
+    let guard = state.session.lock().await;
+    let session = guard.as_ref().ok_or(NO_SESSION)?;
+    session
+        .call_raw(&method, params)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+/// Backend identity reported at session/hello.
+#[tauri::command]
+async fn backend_info(
+    state: State<'_, AppState>,
+) -> Result<Option<micyou_api::methods::SessionInfo>, String> {
+    let guard = state.session.lock().await;
+    Ok(guard.as_ref().map(|s| s.info().clone()))
+}
+
 pub fn run() {
     tauri::Builder::default()
         .manage(AppState::default())
@@ -136,7 +161,9 @@ pub fn run() {
             backend_start,
             backend_stop,
             backend_set_mute,
-            backend_set_monitoring
+            backend_set_monitoring,
+            backend_call,
+            backend_info
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

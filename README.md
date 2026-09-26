@@ -31,14 +31,19 @@ MicYou 桌面端后端的独立重构：前后端分离、与 Tauri 解耦的无
 | [`micyou-daemon`](crates/micyou-daemon) | 无头守护进程二进制 |
 | [`libmicyou`](crates/libmicyou) | 门面 crate：`Backend` 构建器，可嵌入任意 Rust 宿主 |
 
-## 下载测试构建
+## 下载开发构建（Development Builds）
 
-手动触发的 [`Release Builds`](../../actions/workflows/release-builds.yml) 工作流会把
-**Slint 前端 / Tauri 前端 / micyou-daemon** 三平台（linux-x64 / windows-x64 /
-macos-arm64）打包发布到滚动预发布版本
-**[dev-builds](../../releases/tag/dev-builds)**（每次 dispatch 覆盖更新，
-zip 内附 RUN-README.txt 运行说明），同时保留为 run 的 workflow artifacts。
-打 `v*` tag 则发布到对应 tag 的 Release。
+两个前端各有独立的构建工作流（**仅上传 workflow artifact，不发布 Release**；
+正式发布应在打 tag 时另行全量构建）：
+
+- [Slint Dev Build](../../actions/workflows/build-slint.yml) → `micyou-slint-{linux-x64,windows-x64,macos-arm64}`
+  （自包含单文件，后端内嵌）
+- [Tauri Dev Build](../../actions/workflows/build-tauri.yml) → `micyou-tauri-{linux-x64,windows-x64,macos-arm64}`
+  （前端 + `micyou-daemon` sidecar 同包）
+
+在 Actions 页 **Run workflow** 触发，构建完成后于 run 页面底部 Artifacts 下载。
+两个工作流均启用 rust-cache（三 workspace 增量编译）。zip 内附 RUN-README.txt
+（Linux webkit2gtk 依赖、macOS 去隔离、Windows SmartScreen/WebView2 说明）。
 
 ## 参考前端（frontends/，独立 workspace，CI 三平台构建+无头 e2e 测试）
 

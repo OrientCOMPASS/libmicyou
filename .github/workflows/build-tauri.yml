@@ -1,0 +1,113 @@
+name: Tauri Dev Build
+
+# Development builds of the Tauri reference frontend + the micyou-daemon
+# sidecar it spawns. Artifacts only — no GitHub Release publishing.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tauri-dev-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            platform: linux-x64
+          - os: windows-2022
+            platform: windows-x64
+          - os: macos-14
+            platform: macos-arm64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # Incremental caches: daemon (root workspace) + tauri frontend workspace.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            frontends/tauri -> target
+          cache-on-failure: true
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config libasound2-dev libx11-dev libxkbcommon-dev libwayland-dev \
+            libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      - name: Build daemon (release)
+        run: cargo build --release -p micyou-daemon
+
+      - name: Build Tauri frontend (release)
+        run: cargo build --release
+        working-directory: frontends/tauri
+
+      - name: Package (unix)
+        if: runner.os != 'Windows'
+        run: |
+          set -eu
+          mkdir -p stage/micyou-tauri
+          cp target/release/micyou-daemon stage/micyou-tauri/
+          cp frontends/tauri/target/release/micyou-tauri-frontend stage/micyou-tauri/
+          { git rev-parse --short HEAD; date -u; } > stage/micyou-tauri/VERSION.txt
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            cat > stage/micyou-tauri/RUN-README.txt <<'NOTES'
+          MicYou Tauri 前端 + 后端守护进程（开发构建）
+
+          运行: ./micyou-tauri-frontend   （自动拉起同目录 micyou-daemon --stdio）
+          依赖: sudo apt install libwebkit2gtk-4.1-0 libgtk-3-0
+          也可独立跑后端: ./micyou-daemon --ws 127.0.0.1:9610 --autostart
+          日志: ~/.config/micyou/logs/daemon.log
+          NOTES
+          else
+            cat > stage/micyou-tauri/RUN-README.txt <<'NOTES'
+          MicYou Tauri 前端 + 后端守护进程（开发构建，未签名）
+
+          首次运行: xattr -cr .   （解除隔离）
+          终端运行: ./micyou-tauri-frontend  （自动拉起同目录 micyou-daemon）
+          独立后端: ./micyou-daemon --stdio 或 --ws 127.0.0.1:9610
+          NOTES
+          fi
+          (cd stage && zip -r "../micyou-tauri-${{ matrix.platform }}.zip" micyou-tauri)
+
+      - name: Package (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $stage = "stage\micyou-tauri"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item target\release\micyou-daemon.exe $stage
+          Copy-Item frontends\tauri\target\release\micyou-tauri-frontend.exe $stage
+          (git rev-parse --short HEAD) + "`n" + (Get-Date).ToUniversalTime() | Set-Content $stage\VERSION.txt
+          @'
+          MicYou Tauri 前端 + 后端守护进程（开发构建）
+
+          运行: micyou-tauri-frontend.exe （自动拉起同目录 micyou-daemon.exe）
+          SmartScreen 提示时: 更多信息 → 仍要运行（未签名）。
+          Tauri 窗口空白 → 安装 Microsoft Edge WebView2 Runtime。
+          日志: %APPDATA%\micyou\logs\daemon.log
+          '@ | Set-Content -Encoding UTF8 $stage\RUN-README.txt
+          Compress-Archive -Path stage\micyou-tauri -DestinationPath "micyou-tauri-${{ matrix.platform }}.zip" -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: micyou-tauri-${{ matrix.platform }}
+          path: micyou-tauri-*.zip
+          if-no-files-found: error

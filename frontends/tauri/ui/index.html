@@ -1,201 +1,334 @@
 <!doctype html>
 <!--
-  libmicyou — Tauri 2 reference frontend (vanilla JS, no bundler).
-  Talks to the Rust side via window.__TAURI__ (withGlobalTauri), which in
-  turn speaks JSON-RPC to the micyou-daemon sidecar.
+  libmicyou — Tauri 2 reference frontend.
+  Full-featured control surface over the backend JSON-RPC contract.
   Copyright (C) 2026 OrientCOMPASS — GPL-3.0-or-later with MicYou Plugin Exception.
 -->
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <title>MicYou · Tauri Frontend</title>
-    <style>
-      :root { color-scheme: dark; }
-      body {
-        margin: 0; padding: 16px; background: #14161a; color: #e8eaee;
-        font: 13px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
-        user-select: none;
-      }
-      h1 { font-size: 15px; margin: 0 0 12px; font-weight: 600; }
-      fieldset {
-        border: 1px solid #2a2e37; border-radius: 8px; margin: 0 0 12px;
-        padding: 10px 12px;
-      }
-      legend { color: #9aa3b2; padding: 0 4px; }
-      .row { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
-      input[type="text"] {
-        background: #1b1e24; border: 1px solid #2a2e37; color: #e8eaee;
-        border-radius: 6px; padding: 6px 8px; width: 90px;
-      }
-      input[type="text"].wide { width: 140px; }
-      button {
-        background: #2a2e37; color: #e8eaee; border: 1px solid #3a3f4b;
-        border-radius: 6px; padding: 6px 14px; cursor: pointer;
-      }
-      button:hover { background: #343947; }
-      button.primary { background: #4463f0; border-color: #4463f0; }
-      button.primary:hover { background: #5b7cfa; }
-      label { display: flex; gap: 6px; align-items: center; }
-      #status { color: #9aa3b2; }
-      #status .connected { color: #7ec87e; }
-      .meter {
-        height: 16px; background: #23262d; border-radius: 4px;
-        overflow: hidden; margin: 8px 0;
-      }
-      .meter > div {
-        height: 100%; width: 0%; background: #4caf50;
-        transition: width 90ms linear;
-      }
-      .meter.muted > div { background: #6b6f78; }
-      #log {
-        background: #1b1e24; border-radius: 6px; padding: 8px;
-        height: 160px; overflow-y: auto; color: #9aa3b2;
-        white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 11px;
-      }
-      .pill {
-        display: inline-block; padding: 1px 8px; border-radius: 999px;
-        background: #23262d; margin-left: 6px;
-      }
-    </style>
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <h1>libmicyou backend — Tauri sidecar 前端 <span class="pill" id="api">api ?</span></h1>
+    <div id="app">
+      <!-- ── sidebar ─────────────────────────────────────────────── -->
+      <nav id="sidebar">
+        <div class="brand">
+          <div class="brand-dot"></div>
+          <div>
+            <div class="brand-name">MicYou</div>
+            <div class="brand-sub">libmicyou backend</div>
+          </div>
+        </div>
+        <button class="nav-item active" data-page="overview"><span class="nav-ico">◉</span>总览</button>
+        <button class="nav-item" data-page="audio"><span class="nav-ico">🎚</span>音频与 DSP</button>
+        <button class="nav-item" data-page="connection"><span class="nav-ico">🔗</span>连接</button>
+        <button class="nav-item" data-page="devices"><span class="nav-ico">🎙</span>虚拟设备</button>
+        <button class="nav-item" data-page="plugins"><span class="nav-ico">🧩</span>插件</button>
+        <button class="nav-item" data-page="settings"><span class="nav-ico">⚙</span>设置</button>
+        <button class="nav-item" data-page="system"><span class="nav-ico">ℹ</span>系统</button>
+        <div class="sidebar-foot">
+          <div id="session-dot" class="dot off"></div>
+          <span id="session-label">未连接</span>
+        </div>
+      </nav>
 
-    <fieldset>
-      <legend>服务器</legend>
-      <div class="row">
-        端口 <input id="port" type="text" value="18554" />
-        模式 <input id="mode" type="text" class="wide" value="wifi" />
-        <button class="primary" id="start">启动</button>
-        <button id="stop">停止</button>
-      </div>
-      <div class="row" id="status">状态：连接中…</div>
-    </fieldset>
+      <!-- ── main ────────────────────────────────────────────────── -->
+      <main id="main">
+        <header id="topbar">
+          <div class="pills">
+            <span class="pill" id="pill-phase">stopped</span>
+            <span class="pill" id="pill-device">无设备</span>
+            <span class="pill" id="pill-mode">-</span>
+          </div>
+          <div class="top-meter"><div id="top-meter-fill"></div></div>
+          <div class="top-actions">
+            <button id="btn-mute" class="btn ghost" title="硬静音">🔇 静音</button>
+            <button id="btn-monitor" class="btn ghost" title="耳返监听">🎧 监听</button>
+          </div>
+        </header>
 
-    <fieldset>
-      <legend>音频</legend>
-      <div class="row">
-        <label><input type="checkbox" id="mute" /> 静音（硬）</label>
-        <label><input type="checkbox" id="monitor" /> 耳返监听</label>
-      </div>
-      <div class="meter" id="meter"><div></div></div>
-      <div class="row" id="level-text">电平：--</div>
-    </fieldset>
+        <!-- 总览 -->
+        <section class="page active" id="page-overview">
+          <div class="grid two">
+            <div class="card">
+              <h2>服务器</h2>
+              <div class="row">
+                <label>端口 <input id="q-port" type="text" value="18554" size="6" /></label>
+                <label>模式
+                  <select id="q-mode">
+                    <option value="wifi">wifi（局域网）</option>
+                    <option value="usb">usb（adb）</option>
+                    <option value="web">web（浏览器）</option>
+                  </select>
+                </label>
+              </div>
+              <div class="row">
+                <button id="btn-start" class="btn primary">▶ 启动</button>
+                <button id="btn-stop" class="btn danger">■ 停止</button>
+              </div>
+              <div class="kv" id="ov-status"></div>
+            </div>
+            <div class="card">
+              <h2>实时电平 / 频谱</h2>
+              <div class="meter big"><div id="ov-meter-fill"></div><span id="ov-meter-text">--</span></div>
+              <canvas id="spectrum" width="520" height="120"></canvas>
+              <div class="row">
+                <label class="switchline"><input type="checkbox" id="chk-spectrum" /> 频谱流（audio/spectrum）</label>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <h2>事件日志</h2>
+            <pre id="evlog" class="logbox"></pre>
+          </div>
+        </section>
 
-    <fieldset>
-      <legend>日志</legend>
-      <div id="log"></div>
-    </fieldset>
+        <!-- 音频与 DSP -->
+        <section class="page" id="page-audio">
+          <div class="grid two">
+            <div class="card">
+              <h2>输出</h2>
+              <div class="row">
+                <label class="grow">输出设备
+                  <select id="dsp-device"></select>
+                </label>
+                <button id="btn-devices-refresh" class="btn ghost">刷新</button>
+              </div>
+              <p class="hint">设备与缓冲在下次启动服务器时生效；静音/监听即时生效。</p>
+              <div class="row">
+                <label>输出缓冲 <input id="dsp-buffer" type="number" min="100" max="1200" step="50" /> ms</label>
+              </div>
+              <div class="meter big"><div id="au-meter-fill"></div><span id="au-meter-text">--</span></div>
+            </div>
+            <div class="card">
+              <h2>开关</h2>
+              <label class="switchline"><input type="checkbox" id="dsp-mute" /> 硬静音（丢弃输出）</label>
+              <label class="switchline"><input type="checkbox" id="dsp-monitor" /> 耳返监听</label>
+              <label class="switchline"><input type="checkbox" id="dsp-aec" /> 回声消除 AEC <span class="hint" id="aec-note"></span></label>
+              <div class="kv" id="aec-status"></div>
+            </div>
+          </div>
 
-    <script>
-      const { invoke } = window.__TAURI__.core;
-      const { listen } = window.__TAURI__.event;
+          <div class="card">
+            <h2>DSP 处理链</h2>
+            <div id="chain-chips" class="chips"></div>
+            <div class="grid three">
+              <div class="field">
+                <label>增益 <output id="o-gain"></output> dB</label>
+                <input type="range" id="dsp-gain" min="-50" max="50" step="0.5" />
+              </div>
+              <div class="field">
+                <label class="switchline"><input type="checkbox" id="dsp-ns" /> 降噪 NS</label>
+                <select id="dsp-ns-type">
+                  <option>PureVox</option><option>RNNoise</option><option>Speexdsp</option>
+                </select>
+                <label>强度 <output id="o-nsi"></output></label>
+                <input type="range" id="dsp-ns-intensity" min="0" max="100" step="1" />
+              </div>
+              <div class="field">
+                <label class="switchline"><input type="checkbox" id="dsp-dereverb" /> 去混响</label>
+                <label>强度 <output id="o-drv"></output></label>
+                <input type="range" id="dsp-dereverb-level" min="0" max="100" step="1" />
+              </div>
+              <div class="field">
+                <label class="switchline"><input type="checkbox" id="dsp-agc" /> 自动增益 AGC</label>
+                <label>目标 <input type="number" id="dsp-agc-target" min="0" max="32767" step="500" /></label>
+                <label>Attack <output id="o-agca"></output></label>
+                <input type="range" id="dsp-agc-attack" min="1" max="100" step="1" />
+                <label>Decay <output id="o-agcd"></output></label>
+                <input type="range" id="dsp-agc-decay" min="1" max="100" step="1" />
+              </div>
+              <div class="field">
+                <label class="switchline"><input type="checkbox" id="dsp-vad" /> 语音门限 VAD</label>
+                <label>阈值 <output id="o-vad"></output> dB</label>
+                <input type="range" id="dsp-vad-threshold" min="-100" max="0" step="1" />
+              </div>
+              <div class="field">
+                <label class="switchline"><input type="checkbox" id="dsp-eq" /> 均衡器 EQ</label>
+                <label>前置放大 <output id="o-preamp"></output> dB</label>
+                <input type="range" id="dsp-eq-preamp" min="-12" max="12" step="0.5" />
+              </div>
+            </div>
+            <div class="eq" id="eq-bands"></div>
+            <div class="row sticky-actions">
+              <button id="btn-dsp-save" class="btn primary">保存并应用</button>
+              <button id="btn-dsp-reset" class="btn ghost">放弃修改（重载）</button>
+              <span id="dsp-dirty" class="hint"></span>
+            </div>
+          </div>
+        </section>
 
-      const $ = (id) => document.getElementById(id);
-      const logEl = $("log");
-      function log(line) {
-        const at = new Date().toLocaleTimeString();
-        logEl.textContent = `[${at}] ${line}\n` + logEl.textContent;
-        if (logEl.textContent.length > 20000) {
-          logEl.textContent = logEl.textContent.slice(0, 20000);
-        }
-      }
+        <!-- 连接 -->
+        <section class="page" id="page-connection">
+          <div class="grid two">
+            <div class="card">
+              <h2>局域网地址（手机连接 / 二维码内容）</h2>
+              <div id="net-ips" class="chips"></div>
+              <div class="kv" id="net-info"></div>
+              <button id="btn-net-refresh" class="btn ghost">刷新</button>
+              <button id="btn-firewall" class="btn ghost" title="仅 Windows：请求防火墙入站规则（UAC）">🛡 允许防火墙</button>
+            </div>
+            <div class="card">
+              <h2>网络接口</h2>
+              <table class="tbl"><thead><tr><th>IP</th><th>接口</th></tr></thead><tbody id="iface-tbody"></tbody></table>
+            </div>
+          </div>
+          <div class="grid two">
+            <div class="card">
+              <h2>USB（adb reverse）</h2>
+              <div class="row">
+                <select id="usb-devices" class="grow"></select>
+                <button id="btn-usb-refresh" class="btn ghost">刷新</button>
+                <button id="btn-usb-enable" class="btn primary">启用 USB 模式</button>
+              </div>
+              <div class="kv" id="usb-result"></div>
+            </div>
+            <div class="card">
+              <h2>Web 模式</h2>
+              <div class="kv" id="web-status"></div>
+              <div id="web-urls" class="chips"></div>
+              <button id="btn-web-refresh" class="btn ghost">刷新</button>
+            </div>
+          </div>
+        </section>
 
-      async function refreshStatus() {
-        try {
-          const s = await invoke("backend_status");
-          const conn = s.isConnected
-            ? '<span class="connected">已连接设备</span>'
-            : "无设备";
-          $("status").innerHTML =
-            `状态：<b>${s.phase}</b> · ${conn} · 静音 ${s.isMuted ? "是" : "否"}`;
-          $("mute").checked = s.isMuted;
-          $("monitor").checked = s.isMonitoring;
-        } catch (e) {
-          $("status").textContent = `状态：${e}`;
-        }
-      }
+        <!-- 虚拟设备 -->
+        <section class="page" id="page-devices">
+          <div class="card" id="dev-win" hidden>
+            <h2>VB-CABLE（Windows）</h2>
+            <div class="kv" id="vbc-status"></div>
+            <div class="row">
+              <button id="btn-vbc-check" class="btn ghost">检查</button>
+              <button id="btn-vbc-install" class="btn primary">下载并安装（UAC）</button>
+            </div>
+            <pre id="vbc-progress" class="logbox small"></pre>
+          </div>
+          <div class="card" id="dev-mac" hidden>
+            <h2>BlackHole（macOS）</h2>
+            <div class="kv" id="bh-status"></div>
+            <div class="row">
+              <button id="btn-bh-check" class="btn ghost">检查</button>
+              <button id="btn-bh-set" class="btn primary">设为系统输入</button>
+              <button id="btn-bh-restore" class="btn ghost">恢复原输入</button>
+            </div>
+          </div>
+          <div class="card" id="dev-linux" hidden>
+            <h2>PipeWire（Linux）</h2>
+            <div class="kv" id="pw-status"></div>
+            <button id="btn-pw-check" class="btn ghost">刷新状态</button>
+            <p class="hint">服务器启动时自动创建 MicYouVirtualSink/Source；此处仅展示状态。</p>
+          </div>
+        </section>
 
-      $("start").onclick = async () => {
-        const port = parseInt($("port").value, 10) || 18554;
-        const mode = $("mode").value.trim().toLowerCase() || "wifi";
-        try {
-          const msg = await invoke("backend_start", { port, mode });
-          log(`启动：${msg}`);
-        } catch (e) { log(`启动失败：${e}`); }
-        refreshStatus();
-      };
-      $("stop").onclick = async () => {
-        try { log(`停止：${await invoke("backend_stop")}`); }
-        catch (e) { log(`停止失败：${e}`); }
-        refreshStatus();
-      };
-      $("mute").onchange = async (ev) => {
-        try { await invoke("backend_set_mute", { muted: ev.target.checked }); }
-        catch (e) { log(`静音失败：${e}`); }
-      };
-      $("monitor").onchange = async (ev) => {
-        try { await invoke("backend_set_monitoring", { enabled: ev.target.checked }); }
-        catch (e) { log(`监听失败：${e}`); }
-      };
+        <!-- 插件 -->
+        <section class="page" id="page-plugins">
+          <div class="grid split">
+            <div class="card">
+              <h2>已安装 <button id="btn-plugins-refresh" class="btn ghost mini">刷新</button></h2>
+              <div id="plugin-list" class="plist"></div>
+              <div class="row">
+                <button id="btn-plugins-dir" class="btn ghost">打开插件目录</button>
+                <span class="kv inline" id="plugin-sync"></span>
+              </div>
+            </div>
+            <div class="card" id="plugin-detail">
+              <h2 id="pd-name">选择左侧插件</h2>
+              <div id="pd-meta" class="kv"></div>
+              <div id="pd-caps" class="chips"></div>
+              <div class="row">
+                <label class="switchline"><input type="checkbox" id="pd-enabled" /> 启用</label>
+                <button id="pd-uninstall" class="btn danger mini">卸载</button>
+              </div>
+              <h3>配置（JSON，逐键保存）</h3>
+              <textarea id="pd-config" spellcheck="false"></textarea>
+              <div class="row">
+                <button id="pd-config-load" class="btn ghost mini">读取</button>
+                <button id="pd-config-save" class="btn primary mini">保存</button>
+              </div>
+              <h3>触发 UI 动作</h3>
+              <div class="row">
+                <input id="pd-action" type="text" placeholder="action，如 play" />
+                <input id="pd-payload" type="text" placeholder="payload（可选）" class="grow" />
+                <button id="pd-trigger" class="btn ghost mini">发送</button>
+              </div>
+              <h3>日志 <button id="pd-logs" class="btn ghost mini">刷新</button></h3>
+              <pre id="pd-log" class="logbox small"></pre>
+            </div>
+          </div>
+        </section>
 
-      listen("backend-state", (e) => {
-        log(`后端会话：${e.payload}`);
-        refreshStatus();
-      });
+        <!-- 设置 -->
+        <section class="page" id="page-settings">
+          <div class="grid two">
+            <div class="card">
+              <h2>server.json（连接偏好）</h2>
+              <div class="form">
+                <label>端口 <input type="number" id="sp-port" min="1" max="65534" /></label>
+                <label>Web 端口 <input type="number" id="sp-webport" min="1" max="65535" /></label>
+                <label>模式
+                  <select id="sp-mode"><option>wifi</option><option>usb</option><option>web</option></select>
+                </label>
+                <label>绑定地址 <input type="text" id="sp-bind" /></label>
+                <label class="switchline"><input type="checkbox" id="sp-autobind" /> 自动绑定（0.0.0.0）</label>
+                <label>输出设备 <input type="text" id="sp-device" placeholder="留空 = 默认/虚拟设备" class="grow" /></label>
+                <label class="switchline"><input type="checkbox" id="sp-mutesync" /> 与手机双向同步静音</label>
+              </div>
+              <div class="row">
+                <button id="btn-prefs-save" class="btn primary">保存</button>
+                <button id="btn-prefs-reload" class="btn ghost">重载</button>
+                <span id="prefs-exists" class="hint"></span>
+              </div>
+            </div>
+            <div class="card">
+              <h2>ui.json / theme.json（前端偏好）</h2>
+              <div class="form">
+                <label>语言 <input type="text" id="ui-lang" placeholder="zh / en …" /></label>
+                <label>主题色 <input type="color" id="ui-color" /></label>
+              </div>
+              <div class="row">
+                <button id="btn-ui-save" class="btn primary">保存</button>
+                <button id="btn-ui-reload" class="btn ghost">重载</button>
+              </div>
+              <h3>主题色板（GUI 导出）</h3>
+              <div class="kv" id="theme-colors"></div>
+            </div>
+          </div>
+        </section>
 
-      listen("backend-event", (e) => {
-        const ev = e.payload; // {type, data}
-        switch (ev.type) {
-          case "audioLevel": {
-            const v = Math.min(100, Math.max(0, ev.data.level));
-            $("meter").firstElementChild.style.width = `${v}%`;
-            $("level-text").textContent = `电平：${v}%`;
-            break;
-          }
-          case "muteStateChanged":
-            $("mute").checked = ev.data.muted;
-            $("meter").classList.toggle("muted", ev.data.muted);
-            refreshStatus();
-            break;
-          case "monitoringChanged":
-            $("monitor").checked = ev.data.enabled;
-            break;
-          case "deviceConnected":
-            log(`设备连接：${ev.data.device.name} (${ev.data.device.ip})`);
-            refreshStatus();
-            break;
-          case "deviceDisconnected":
-            log("设备断开");
-            refreshStatus();
-            break;
-          case "serverStopped":
-            log("服务器已停止");
-            $("meter").firstElementChild.style.width = "0%";
-            refreshStatus();
-            break;
-          case "udpAudioWarning":
-            log("警告：TCP 已连接但长时间未收到 UDP 音频（防火墙？）");
-            break;
-          default:
-            log(`事件：${ev.type}`);
-        }
-      });
+        <!-- 系统 -->
+        <section class="page" id="page-system">
+          <div class="grid two">
+            <div class="card">
+              <h2>后端</h2>
+              <div class="kv" id="sys-version"></div>
+              <div class="row">
+                <button id="btn-update-check" class="btn ghost">检查更新</button>
+              </div>
+              <div class="kv" id="sys-update"></div>
+              <h3>模式锁</h3>
+              <div class="kv" id="sys-mode"></div>
+              <div class="row">
+                <button id="btn-mode-refresh" class="btn ghost mini">刷新</button>
+                <button id="btn-mode-release" class="btn danger mini">释放（仅本进程持有时）</button>
+              </div>
+            </div>
+            <div class="card">
+              <h2>守护进程日志</h2>
+              <div class="kv" id="log-path"></div>
+              <div class="row">
+                <button id="btn-log-refresh" class="btn ghost mini">加载尾部 64KiB</button>
+                <button id="btn-log-export" class="btn ghost mini">导出</button>
+              </div>
+              <pre id="log-content" class="logbox tall"></pre>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
 
-      // 初始探测（sidecar 连接是异步的，轮询几次直到连上）
-      (async function probe() {
-        for (let i = 0; i < 30; i++) {
-          try {
-            if (await invoke("backend_connected")) {
-              log("后端 sidecar 已连接（stdio JSON-RPC）");
-              refreshStatus();
-              return;
-            }
-          } catch (_) {}
-          await new Promise((r) => setTimeout(r, 500));
-        }
-        log("后端连接超时：请确认 micyou-daemon 在 PATH / 同级目录 / $MICYOU_DAEMON");
-      })();
-    </script>
+    <div id="toasts"></div>
+    <script src="app.js"></script>
   </body>
 </html>

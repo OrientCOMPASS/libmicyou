@@ -52,6 +52,8 @@ pub fn daemon_command() -> tokio::process::Command {
 /// A connected backend session.
 pub struct Session {
     client: Client,
+    /// Identity/capabilities returned by `session/hello`.
+    info: micyou_api::methods::SessionInfo,
     /// Owning handle for embedded sessions (None for sidecar).
     _managed: Option<Arc<libmicyou::Managed>>,
 }
@@ -62,11 +64,12 @@ impl Session {
         let mut command = daemon_command();
         log::info!("spawning daemon sidecar: {command:?}");
         let client = Client::connect_stdio(&mut command).await?;
-        let session = Self {
+        let mut session = Self {
             client,
+            info: placeholder_info(),
             _managed: None,
         };
-        session.handshake("tauri-frontend").await?;
+        session.info = session.handshake("tauri-frontend").await?;
         Ok(session)
     }
 
@@ -80,18 +83,39 @@ impl Session {
             .map_err(|e| ClientError::Transport(format!("build backend: {e}")))?;
         let conn = managed.attach_local();
         let client = Client::connect_channels(conn.inbound, conn.outbound);
-        let session = Self {
+        let mut session = Self {
             client,
+            info: placeholder_info(),
             _managed: Some(Arc::new(managed)),
         };
-        session.handshake("tauri-frontend-embedded").await?;
+        session.info = session.handshake("tauri-frontend-embedded").await?;
         Ok(session)
     }
 
-    async fn handshake(&self, name: &str) -> Result<(), ClientError> {
-        self.client.hello(name, true).await?;
+    async fn handshake(&self, name: &str) -> Result<micyou_api::methods::SessionInfo, ClientError> {
+        let info = self.client.hello(name, true).await?;
         self.client.subscribe(&["*"]).await?;
-        Ok(())
+        Ok(info)
+    }
+
+    /// Identity reported by the backend at hello.
+    pub fn info(&self) -> &micyou_api::methods::SessionInfo {
+        &self.info
+    }
+
+    /// Generic pass-through to any contract method (the webview UI drives
+    /// the full surface through this single Tauri command).
+    pub async fn call_raw(
+        &self,
+        method: &str,
+        params: Option<serde_json::Value>,
+    ) -> Result<serde_json::Value, ClientError> {
+        self.client
+            .call::<serde_json::Value, serde_json::Value>(
+                method,
+                params.unwrap_or_else(|| serde_json::json!({})),
+            )
+            .await
     }
 
     pub fn events(&self) -> tokio::sync::broadcast::Receiver<Arc<micyou_api::events::ServerEvent>> {
@@ -142,5 +166,15 @@ impl Session {
             )
             .await?;
         Ok(())
+    }
+}
+
+fn placeholder_info() -> micyou_api::methods::SessionInfo {
+    micyou_api::methods::SessionInfo {
+        backend: String::new(),
+        version: String::new(),
+        api_version: 0,
+        os: String::new(),
+        arch: String::new(),
     }
 }

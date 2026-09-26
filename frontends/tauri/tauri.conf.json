@@ -12,10 +12,11 @@
       {
         "label": "main",
         "title": "MicYou · Tauri Frontend (libmicyou sidecar)",
-        "width": 640,
-        "height": 760,
-        "minWidth": 480,
-        "minHeight": 560
+        "width": 1200,
+        "height": 820,
+        "minWidth": 960,
+        "minHeight": 640,
+        "center": true
       }
     ],
     "security": {
@@ -24,6 +25,9 @@
   },
   "bundle": {
     "active": false,
-    "icon": ["icons/icon.png", "icons/icon.ico"]
+    "icon": [
+      "icons/icon.png",
+      "icons/icon.ico"
+    ]
   }
 }

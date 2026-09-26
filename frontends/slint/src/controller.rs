@@ -21,6 +21,8 @@ use micyou_client::{Client, ClientError};
 /// A connected backend session with the few calls this frontend needs.
 pub struct Session {
     client: Client,
+    /// Identity reported by `session/hello`.
+    info: micyou_api::methods::SessionInfo,
     /// Kept alive for embedded sessions (owns the backend); None for remote.
     _managed: Option<Arc<libmicyou::Managed>>,
 }
@@ -37,18 +39,45 @@ impl Session {
             .map_err(|e| ClientError::Transport(format!("build backend: {e}")))?;
         let conn = managed.attach_local();
         let client = Client::connect_channels(conn.inbound, conn.outbound);
-        let session = Self {
+        let mut session = Self {
             client,
+            info: micyou_api::methods::SessionInfo {
+                backend: String::new(),
+                version: String::new(),
+                api_version: 0,
+                os: String::new(),
+                arch: String::new(),
+            },
             _managed: Some(Arc::new(managed)),
         };
-        session.handshake("slint-frontend").await?;
+        session.info = session.handshake("slint-frontend").await?;
         Ok(session)
     }
 
-    async fn handshake(&self, name: &str) -> Result<(), ClientError> {
-        self.client.hello(name, true).await?;
+    async fn handshake(&self, name: &str) -> Result<micyou_api::methods::SessionInfo, ClientError> {
+        let info = self.client.hello(name, true).await?;
         self.client.subscribe(&["*"]).await?;
-        Ok(())
+        Ok(info)
+    }
+
+    /// Identity reported by the backend at hello.
+    pub fn info(&self) -> &micyou_api::methods::SessionInfo {
+        &self.info
+    }
+
+    /// Generic pass-through to any contract method — the full UI drives the
+    /// backend through this single entry point.
+    pub async fn call_raw(
+        &self,
+        method: &str,
+        params: Option<serde_json::Value>,
+    ) -> Result<serde_json::Value, ClientError> {
+        self.client
+            .call::<serde_json::Value, serde_json::Value>(
+                method,
+                params.unwrap_or_else(|| serde_json::json!({})),
+            )
+            .await
     }
 
     /// Independent event stream receiver.
