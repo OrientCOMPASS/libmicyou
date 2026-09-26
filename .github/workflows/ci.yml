@@ -69,3 +69,19 @@ jobs:
 
       - name: Test
         run: cargo test --workspace
+
+      # End-to-end smoke: drive the daemon over stdio JSON-RPC and validate
+      # the response envelope (exercises logging, config, core, rpc wiring).
+      - name: Daemon stdio smoke test
+        if: runner.os == 'Linux'
+        run: |
+          printf '%s\n' \
+            '{"jsonrpc":"2.0","id":0,"method":"session/hello","params":{"name":"ci"}}' \
+            '{"jsonrpc":"2.0","id":1,"method":"system/version"}' \
+            '{"jsonrpc":"2.0","id":2,"method":"server/status"}' \
+            | timeout 60 ./target/debug/micyou-daemon --stdio --no-mode-lock --no-log-file --mirror-logs \
+            > smoke.out 2> smoke.err || true
+          echo "--- daemon stderr (tail) ---"; tail -5 smoke.err
+          echo "--- daemon stdout ---"; cat smoke.out
+          jq -e 'select(.id==1) | .result.apiVersion == 1' smoke.out
+          jq -e 'select(.id==2) | .result.phase == "stopped"' smoke.out

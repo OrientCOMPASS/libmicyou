@@ -31,6 +31,48 @@ MicYou 桌面端后端的独立重构：前后端分离、与 Tauri 解耦的无
 | [`micyou-daemon`](crates/micyou-daemon) | 无头守护进程二进制 |
 | [`libmicyou`](crates/libmicyou) | 门面 crate：`Backend` 构建器，可嵌入任意 Rust 宿主 |
 
+## 文档
+
+- [PLAN.md](./PLAN.md) — 重构路线图与现状分析
+- [docs/architecture.md](./docs/architecture.md) — 模块拓扑、数据流、生命周期与并发设计
+- [docs/rpc-api.md](./docs/rpc-api.md) — JSON-RPC 契约全表（方法/事件/错误码/传输）
+- [docs/plugin-api-v3.md](./docs/plugin-api-v3.md) — 插件解放：`call_host` 桥与事件订阅
+
+## 快速开始
+
+```bash
+# 无头守护进程（stdio，供 GUI sidecar）
+cargo run -p micyou-daemon -- --stdio
+
+# 本地 WebSocket 服务（浏览器/多前端）
+cargo run -p micyou-daemon -- --ws 127.0.0.1:9610
+
+# 启动即开服（按 server.json 配置）
+cargo run -p micyou-daemon -- --ws 127.0.0.1:9610 --autostart
+```
+
+用任意 JSON-RPC 客户端验证：
+
+```bash
+printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"system/version"}' \
+  | cargo run -q -p micyou-daemon -- --stdio --no-mode-lock
+```
+
+Rust 前端可嵌入门面或使用 SDK：
+
+```rust
+// 进程内嵌入
+let managed = libmicyou::Builder::new().build()?;
+let mut conn = managed.attach_local();          // JSON-RPC over channels
+
+// 或连接守护进程
+let mut client = micyou_client::Client::connect_stdio(
+    tokio::process::Command::new("micyou-daemon").arg("--stdio"),
+).await?;
+client.hello("my-app", true).await?;
+let status = client.server_status().await?;
+```
+
 ## 开发
 
 ```bash
