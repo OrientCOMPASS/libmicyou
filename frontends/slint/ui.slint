@@ -178,7 +178,7 @@ export component MainWindow inherits Window {
 
   // ── callbacks ──
   callback nav(int);
-  callback start();
+  callback start-server();
   callback stop();
   callback mute-toggled(bool);
   callback monitoring-toggled(bool);
@@ -186,7 +186,7 @@ export component MainWindow inherits Window {
   callback dsp-save();
   callback dsp-reload();
   callback devices-refresh();
-  callback device-selected(int);
+  callback device-selected(string);
   callback net-refresh();
   callback usb-refresh();
   callback usb-enable();
@@ -227,7 +227,7 @@ export component MainWindow inherits Window {
         HorizontalLayout {
           spacing: 8px;
           Rectangle { width: 24px; height: 24px; border-radius: 7px;
-            background: linear-gradient(135deg, Theme.accent, #9b5bfa); }
+            background: @linear-gradient(135deg, Theme.accent, #9b5bfa); }
           VerticalLayout {
             Text { text: "MicYou"; color: Theme.text; font-weight: 700; font-size: 13px; }
             Text { text: "libmicyou backend"; color: Theme.dim; font-size: 10px; }
@@ -338,7 +338,7 @@ export component MainWindow inherits Window {
       // ── pages ──
       ScrollView {
         vertical-stretch: 1;
-        viewport-width: parent.width;
+        content-width: parent.width;
 
         VerticalLayout {
           padding: 14px; padding-left: 16px; padding-right: 16px; spacing: 12px;
@@ -361,7 +361,7 @@ export component MainWindow inherits Window {
                 }
                 HorizontalLayout {
                   spacing: 8px;
-                  Button { text: "▶ 启动"; primary: true; clicked => { root.start(); } }
+                  Button { text: "▶ 启动"; primary: true; clicked => { root.start-server(); } }
                   Button { text: "■ 停止"; clicked => { root.stop(); } }
                   Rectangle { horizontal-stretch: 1; }
                 }
@@ -396,7 +396,7 @@ export component MainWindow inherits Window {
                   ComboBox {
                     model: root.dsp-devices;
                     current-index <=> root.dsp-device-index;
-                    selected(i) => { root.device-selected(i); }
+                    selected(v) => { root.device-selected(v); }
                     horizontal-stretch: 1;
                   }
                   Button { text: "刷新"; clicked => { root.devices-refresh(); } }

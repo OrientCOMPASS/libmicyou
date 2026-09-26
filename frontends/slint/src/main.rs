@@ -78,7 +78,7 @@ enum Cmd {
     DspSave,
     DspReload,
     DevicesRefresh,
-    DeviceSelected(i32),
+    DeviceSelected(String),
     NetRefresh,
     UsbRefresh,
     UsbEnable,
@@ -332,15 +332,12 @@ impl Ctl {
         }
     }
 
-    async fn device_selected(&mut self, index: i32) {
-        let device = if index <= 0 {
-            String::new()
+    async fn device_selected(&mut self, label: &str) {
+        // index 0 is the "default/virtual device" entry; otherwise match by name
+        let device = if self.cache.devices.iter().any(|d| d == label) {
+            label.to_string()
         } else {
-            self.cache
-                .devices
-                .get((index - 1) as usize)
-                .cloned()
-                .unwrap_or_default()
+            String::new()
         };
         let mut prefs = self
             .call("server/prefs/get", json!({}))
@@ -1177,7 +1174,7 @@ fn wire(ui: &MainWindow, tx: &tokio::sync::mpsc::UnboundedSender<Cmd>) {
     }
     let weak = ui.as_weak();
 
-    cmd!(on_start, Cmd::Start);
+    cmd!(on_start_server, Cmd::Start);
     cmd!(on_stop, Cmd::Stop);
     cmd!(on_dsp_save, Cmd::DspSave);
     cmd!(on_dsp_reload, Cmd::DspReload);
@@ -1235,8 +1232,8 @@ fn wire(ui: &MainWindow, tx: &tokio::sync::mpsc::UnboundedSender<Cmd>) {
     }
     {
         let tx = tx.clone();
-        ui.on_device_selected(move |v| {
-            let _ = tx.send(Cmd::DeviceSelected(v));
+        ui.on_device_selected(move |v: SharedString| {
+            let _ = tx.send(Cmd::DeviceSelected(v.to_string()));
         });
     }
     {
@@ -1391,7 +1388,7 @@ async fn handle_cmd(ctl: &mut Ctl, cmd: Cmd) {
         }
         Cmd::DspSave => ctl.dsp_save().await,
         Cmd::DspReload | Cmd::DevicesRefresh => ctl.load_dsp().await,
-        Cmd::DeviceSelected(i) => ctl.device_selected(i).await,
+        Cmd::DeviceSelected(label) => ctl.device_selected(&label).await,
         Cmd::NetRefresh => ctl.load_connection().await,
         Cmd::UsbRefresh => ctl.load_usb().await,
         Cmd::UsbEnable => ctl.usb_enable().await,
