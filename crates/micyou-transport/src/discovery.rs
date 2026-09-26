@@ -1,0 +1,122 @@
+/*
+ * MicYou — Turns your Android device into a high-quality PC microphone.
+ * Copyright (C) 2026 LanRhyme <https://github.com/LanRhyme/MicYou>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version, with the MicYou Plugin Exception.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ */
+
+use mdns_sd::{ServiceDaemon, ServiceInfo};
+use micyou_protocol::MDNS_SERVICE_TYPE;
+use std::collections::HashMap;
+
+pub struct NetworkManager {
+    mdns: ServiceDaemon,
+    service_fullname: String,
+}
+
+impl NetworkManager {
+    pub fn start_mdns(port: u16, bind_address: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        Self::start_mdns_helper(bind_address, port, MDNS_SERVICE_TYPE)
+    }
+
+    pub fn start_web_mdns(
+        port: u16,
+        bind_address: &str,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        Self::start_mdns_helper(bind_address, port, micyou_protocol::MDNS_WEB_SERVICE_TYPE)
+    }
+
+    pub fn stop_mdns(&self) {
+        let _ = self.mdns.unregister(&self.service_fullname);
+        let _ = self.mdns.shutdown();
+    }
+
+    fn get_best_ip() -> Option<String> {
+        if let Ok(interfaces) = local_ip_address::list_afinet_netifas() {
+            let mut best_ip = None;
+            for (name, ip) in interfaces {
+                if ip.is_loopback() || !ip.is_ipv4() {
+                    continue;
+                }
+                let ip_str = ip.to_string();
+                let name_lower = name.to_lowercase();
+
+                // Filter out common TUN/VPN and virtual interfaces
+                if ip_str.starts_with("198.18.")
+                    || name_lower.contains("tailscale")
+                    || name_lower.contains("virtual")
+                    || name_lower.contains("wsl")
+                    || name_lower.contains("veth")
+                    || name_lower.contains("flclash")
+                    || name_lower.contains("clash")
+                {
+                    continue;
+                }
+
+                if ip_str.starts_with("192.168.") {
+                    return Some(ip_str); // Prefer 192.168.x.x
+                }
+                if best_ip.is_none() {
+                    best_ip = Some(ip_str);
+                }
+            }
+            if best_ip.is_some() {
+                return best_ip;
+            }
+        }
+        // Fallback
+        local_ip_address::local_ip().map(|ip| ip.to_string()).ok()
+    }
+
+    fn start_mdns_helper(
+        bind_address: &str,
+        port: u16,
+        service_type: &str,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        let mdns = ServiceDaemon::new()?;
+
+        let host_name = hostname::get()?
+            .into_string()
+            .unwrap_or_else(|_| "UnknownHost".to_string());
+        let instance_name = format!("MicYou ({})", host_name);
+
+        let local_ip = if bind_address == "0.0.0.0" {
+            Self::get_best_ip().unwrap_or_else(|| "127.0.0.1".to_string())
+        } else {
+            bind_address.to_string()
+        };
+
+        let service_fullname = format!("{}.{}", instance_name, service_type);
+
+        // Hostname must be a valid DNS name, e.g. "mycomputer.local."
+        let valid_host_name = format!("{}.local.", host_name.replace(" ", "-"));
+
+        // Setup mDNS service info
+        let properties: HashMap<String, String> = HashMap::new();
+        let service_info = ServiceInfo::new(
+            service_type,
+            &instance_name,
+            &valid_host_name,
+            local_ip.to_string(),
+            port,
+            Some(properties),
+        )?;
+
+        // Register the service
+        mdns.register(service_info)?;
+        log::info!("mDNS Service registered: {}", service_fullname);
+
+        Ok(Self {
+            mdns,
+            service_fullname,
+        })
+    }
+}

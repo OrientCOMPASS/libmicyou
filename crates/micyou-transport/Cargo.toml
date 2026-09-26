@@ -15,12 +15,9 @@ web = ["dep:axum", "dep:rcgen", "dep:rustls", "dep:tokio-rustls", "dep:rustls-pe
 micyou-protocol.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
-bytes.workspace = true
 prost.workspace = true
 serde.workspace = true
-serde_json.workspace = true
 log.workspace = true
-opus-decoder.workspace = true
 
 # Discovery / host networking
 mdns-sd.workspace = true
