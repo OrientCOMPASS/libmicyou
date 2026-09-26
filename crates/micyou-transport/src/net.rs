@@ -117,16 +117,21 @@ pub async fn bind_tcp_listeners(bind: IpAddr, port: u16) -> io::Result<Vec<TcpLi
             }
             // Fallback: separate v4 + v6 listeners (either may fail alone).
             let mut out = Vec::new();
-            let v4 = tcp_listener(IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED), port, false);
-            let v6 = tcp_listener(IpAddr::V6(Ipv6Addr::UNSPECIFIED), port, true);
-            if let Ok(l) = v4 {
-                out.push(l);
+            let mut first_err: Option<io::Error> = None;
+            match tcp_listener(IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED), port, false) {
+                Ok(l) => out.push(l),
+                Err(e) => first_err = Some(e),
             }
-            if let Ok(l) = v6 {
-                out.push(l);
+            match tcp_listener(IpAddr::V6(Ipv6Addr::UNSPECIFIED), port, true) {
+                Ok(l) => out.push(l),
+                Err(e) => {
+                    if first_err.is_none() {
+                        first_err = Some(e);
+                    }
+                }
             }
             if out.is_empty() {
-                return Err(v4.err().unwrap_or_else(|| {
+                return Err(first_err.unwrap_or_else(|| {
                     io::Error::new(
                         io::ErrorKind::AddrNotAvailable,
                         "no listener could be bound",
