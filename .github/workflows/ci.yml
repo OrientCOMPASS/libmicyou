@@ -83,5 +83,8 @@ jobs:
             > smoke.out 2> smoke.err || true
           echo "--- daemon stderr (tail) ---"; tail -5 smoke.err
           echo "--- daemon stdout ---"; cat smoke.out
-          jq -e 'select(.id==1) | .result.apiVersion == 1' smoke.out
-          jq -e 'select(.id==2) | .result.phase == "stopped"' smoke.out
+          # jq -s (slurp): with -e on a multi-document stream, jq 1.x exits 4
+          # when the LAST input line produces no output, even if an earlier
+          # selection printed true — collect first, then assert.
+          jq -s -e 'map(select(.id==1)) | .[0].result.apiVersion == 1' smoke.out
+          jq -s -e 'map(select(.id==2)) | .[0].result.phase == "stopped"' smoke.out

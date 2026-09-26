@@ -169,7 +169,6 @@ fn onnx_warning_logger() -> ort::logging::LoggerFunction {
 /// Initialize the ONNX Runtime by dynamically loading the shared library from
 /// the given path.  With `load-dynamic` this must be called once before any
 /// [`Session`](ort::session::Session) is built.
-
 #[cfg(feature = "noise-suppression")]
 pub fn init_ort_runtime(lib_path: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
     ort::init_from(lib_path)?

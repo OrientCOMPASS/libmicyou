@@ -116,7 +116,6 @@ pub struct Client {
     pending: Arc<Mutex<HashMap<i64, oneshot::Sender<Result<Value, RpcError>>>>>,
     /// Backend events (all of them; filter locally as needed).
     pub events: broadcast::Receiver<Arc<ServerEvent>>,
-    event_bus: broadcast::Sender<Arc<ServerEvent>>,
     /// Raw notification lines that are not events (future extensions).
     _raw_notifications: mpsc::UnboundedReceiver<Value>,
 }
@@ -169,7 +168,6 @@ impl Client {
             next_id: AtomicI64::new(1),
             pending,
             events,
-            event_bus,
             _raw_notifications: raw_notifications,
         })
     }
@@ -213,7 +211,6 @@ impl Client {
             next_id: AtomicI64::new(1),
             pending,
             events,
-            event_bus,
             _raw_notifications: raw_notifications,
         })
     }
