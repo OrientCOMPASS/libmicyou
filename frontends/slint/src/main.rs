@@ -27,6 +27,7 @@ enum UiCommand {
 }
 
 fn post_message(ui: &Weak<MainWindow>, line: &str) {
+    let ui = ui.clone();
     let line = line.to_string();
     let _ = slint::invoke_from_event_loop(move || {
         if let Some(ui) = ui.upgrade() {
@@ -49,6 +50,7 @@ fn post_message(ui: &Weak<MainWindow>, line: &str) {
 }
 
 fn apply_status(ui: &Weak<MainWindow>, status: &micyou_api::methods::ServerStatus) {
+    let ui = ui.clone();
     let phase = status.phase.clone();
     let connected = status.is_connected;
     let muted = status.is_muted;
@@ -176,6 +178,7 @@ fn main() {
 fn handle_event(ui: &Weak<MainWindow>, event: &Arc<ServerEvent>) {
     match &**event {
         ServerEvent::AudioLevel { level } => {
+            let ui = ui.clone();
             let level = *level;
             let text = format!("Level: {level}%");
             let _ = slint::invoke_from_event_loop(move || {
@@ -186,6 +189,7 @@ fn handle_event(ui: &Weak<MainWindow>, event: &Arc<ServerEvent>) {
             });
         }
         ServerEvent::MuteStateChanged { muted } => {
+            let ui = ui.clone();
             let muted = *muted;
             let _ = slint::invoke_from_event_loop(move || {
                 if let Some(ui) = ui.upgrade() {
@@ -194,6 +198,7 @@ fn handle_event(ui: &Weak<MainWindow>, event: &Arc<ServerEvent>) {
             });
         }
         ServerEvent::MonitoringChanged { enabled } => {
+            let ui = ui.clone();
             let enabled = *enabled;
             let _ = slint::invoke_from_event_loop(move || {
                 if let Some(ui) = ui.upgrade() {
