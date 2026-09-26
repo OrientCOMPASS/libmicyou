@@ -19,7 +19,7 @@ slint::include_modules!();
 
 // ── UI-thread helpers ────────────────────────────────────────────────────────
 
-fn upd(ui: &Weak<MainWindow>, f: impl Fn(&MainWindow) + Send + 'static) {
+fn upd(ui: &Weak<MainWindow>, f: impl FnOnce(&MainWindow) + Send + 'static) {
     let w = ui.clone();
     let _ = slint::invoke_from_event_loop(move || {
         if let Some(ui) = w.upgrade() {
@@ -226,10 +226,10 @@ impl Ctl {
         };
         let aec_supported = self.cache.os != "macos";
 
-        let combo_model: ModelRc<[SharedString]> = ModelRc::new(VecModel::from(
+        let combo_model: ModelRc<SharedString> = ModelRc::new(VecModel::from(
             combo.iter().map(|s| ss(s)).collect::<Vec<_>>(),
         ));
-        let gains_model: ModelRc<[f32]> = ModelRc::new(VecModel::from(gains));
+        let gains_model: ModelRc<f32> = ModelRc::new(VecModel::from(gains));
 
         upd(&self.ui, move |u| {
             u.set_dsp_gain(jf32(&settings, "gain", 0.0));
