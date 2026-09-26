@@ -24,7 +24,7 @@ pub mod opus;
 pub use aec::AecFailure;
 #[cfg(feature = "dsp")]
 pub use dsp::{AudioDspSettings, DspProcessor, EqualizerConfig};
-pub use engine::{AudioOutputManager, RubatoResampler};
+pub use engine::{device_init_lock, AudioOutputManager, RubatoResampler};
 pub use loopback::LoopbackCapture;
 pub use mixer::{SoundEffect, SoundMixer};
 

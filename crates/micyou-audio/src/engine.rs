@@ -14,6 +14,21 @@
  */
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+
+/// Process-wide serialization of cpal device enumeration/stream creation.
+///
+/// cpal's host initialization is not safe to run concurrently within one
+/// process on some platforms (Windows WASAPI/COM). Embedded hosts may
+/// legitimately run several audio engines at once (tests, multi-backend
+/// tooling), so every device-level init path shares this lock.
+static DEVICE_INIT_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+/// Acquire the process-wide device-init lock (poison-tolerant).
+pub fn device_init_lock() -> std::sync::MutexGuard<'static, ()> {
+    DEVICE_INIT_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
 use cpal::{OutputCallbackInfo, SampleFormat, StreamConfig};
 use ringbuf::{HeapRb, Producer};
 use rubato::audioadapter::{Adapter, AdapterMut};
@@ -294,6 +309,7 @@ impl AudioOutputManager {
             if self.monitor_stream.is_some() {
                 return;
             }
+            let _device_guard = device_init_lock();
             let host = cpal::default_host();
             let device = match host.default_output_device() {
                 Some(dev) => dev,
@@ -455,6 +471,11 @@ impl AudioOutputManager {
         target_device: Option<String>,
         buffer_headroom_ms: usize,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        // Serialize all cpal/WASAPI device initialization process-wide (see
+        // device_init_lock): concurrent engine starts otherwise race inside
+        // the Windows audio stack (observed as STATUS_ACCESS_VIOLATION when
+        // two backends initialize in one process).
+        let _device_guard = device_init_lock();
         let host = cpal::default_host();
 
         let device = if let Some(target) = target_device.clone() {

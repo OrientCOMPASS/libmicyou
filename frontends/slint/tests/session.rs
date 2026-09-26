@@ -16,6 +16,12 @@ use std::time::Duration;
 use micyou_api::events::ServerEvent;
 use micyou_slint_frontend::controller::Session;
 
+/// Serialize scenarios: each embeds a full backend (cpal init).
+fn scenario_lock() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
 fn free_port() -> u16 {
     let probe = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     let port = probe.local_addr().unwrap().port();
@@ -60,6 +66,7 @@ async fn wait_for_event(
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn embedded_session_full_cycle() {
+    let _serial = scenario_lock();
     let scenario = async {
         let _dir = isolated_config_dir();
         let session = Session::embedded().await.expect("embedded session");
@@ -119,6 +126,7 @@ async fn embedded_session_full_cycle() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn double_start_reports_error_not_panic() {
+    let _serial = scenario_lock();
     let scenario = async {
         let _dir = isolated_config_dir();
         let session = Session::embedded().await.expect("embedded session");

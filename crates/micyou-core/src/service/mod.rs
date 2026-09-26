@@ -203,6 +203,8 @@ impl Backend {
     /// Sorted list of system output device names.
     pub fn audio_devices(&self) -> Vec<String> {
         use cpal::traits::{DeviceTrait, HostTrait};
+        // Serialize against engine device init (WASAPI is not concurrency-safe).
+        let _device_guard = micyou_audio::device_init_lock();
         let mut names = Vec::new();
         let host = cpal::default_host();
         if let Ok(devices) = host.output_devices() {

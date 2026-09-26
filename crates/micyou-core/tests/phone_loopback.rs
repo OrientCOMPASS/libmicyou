@@ -30,6 +30,15 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpStream, UdpSocket};
 use tokio::sync::broadcast;
 
+/// Serialize the scenarios: each builds a full backend (audio threads,
+/// cpal/WASAPI init) — running two at once is exactly what the engine's
+/// device-init lock guards against, and test-level serialization keeps the
+/// Windows runner deterministic.
+fn scenario_lock() -> std::sync::MutexGuard<'static, ()> {
+    static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
 /// Isolate config/state into ONE throwaway directory per test process (the
 /// scenarios in this file may run in parallel) and pick a free port.
 fn test_env() -> (std::path::PathBuf, u16) {
@@ -160,6 +169,7 @@ fn audio_packet(seq: i32, session_id: i64) -> MessageWrapper {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn phone_session_end_to_end() {
+    let _serial = scenario_lock();
     // Keep the whole scenario bounded so CI can never hang on it.
     let scenario = async {
         let (_dir, port) = test_env();
@@ -362,6 +372,7 @@ fn _type_anchor(_p: PongMessage) {}
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn phone_session_over_ipv6_loopback() {
+    let _serial = scenario_lock();
     let scenario = async {
         let (_dir, port) = test_env();
         let backend = Arc::new(Backend::new());
