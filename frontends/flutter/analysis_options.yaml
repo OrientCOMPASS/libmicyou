@@ -1,0 +1,5 @@
+# Intentionally permissive: this reference app favors clarity over lint purity.
+analyzer:
+  errors:
+    prefer_const_constructors: ignore
+    prefer_const_literals_to_create_immutables: ignore

@@ -1,0 +1,83 @@
+name: Flutter Dev Build
+
+# Development build of the Flutter (Material 3) web frontend.
+# The bundle is hosted by the daemon itself: micyou-daemon --ws ADDR --web-ui DIR
+# → open http://ADDR/ui/. Artifacts only — no Release publishing.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flutter-dev-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      # Linux daemon shipped alongside the web bundle so the artifact is
+      # self-sufficient on the most common dev platform.
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: . -> target
+          cache-on-failure: true
+      - name: Install Linux audio deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libasound2-dev
+      - name: Build daemon (release)
+        run: cargo build --release -p micyou-daemon
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Generate web scaffolding
+        working-directory: frontends/flutter
+        run: |
+          flutter config --no-analytics
+          # creates web/ (+ platform folders) without touching lib/ or pubspec
+          flutter create --platforms=web --project-name micyou_flutter_frontend .
+
+      - name: Build (release web)
+        working-directory: frontends/flutter
+        run: flutter build web --release
+
+      - name: Package
+        run: |
+          set -eu
+          STAGE=stage/micyou-flutter
+          mkdir -p "$STAGE"
+          cp -r frontends/flutter/build/web "$STAGE/webui"
+          cp target/release/micyou-daemon "$STAGE"/
+          { git rev-parse --short HEAD; date -u; } > "$STAGE/VERSION.txt"
+          cat > "$STAGE/RUN-README.txt" <<'NOTES'
+          MicYou Flutter 前端（Material 3 · Web 构建）
+
+          运行方式（Linux 包内含守护进程）:
+            ./micyou-daemon --ws 127.0.0.1:9610 --web-ui ./webui
+            浏览器打开 http://127.0.0.1:9610/ui/ 并点击「连接后端」
+
+          其它平台: 用对应平台的 micyou-daemon（Tauri/Qt/Slint 工件包内）
+          以相同的 --ws --web-ui 参数托管 webui/ 目录即可；
+          或用任意静态服务器托管 webui/ 后在连接页填 ws://<主机>:<端口>/rpc。
+          NOTES
+          (cd stage && zip -ry ../micyou-flutter-web.zip micyou-flutter)
+          ls -la micyou-flutter-web.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: micyou-flutter-web
+          path: micyou-flutter-web.zip
+          if-no-files-found: error

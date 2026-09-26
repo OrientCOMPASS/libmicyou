@@ -36,10 +36,10 @@ MicYou 桌面端后端的独立重构：前后端分离、与 Tauri 解耦的无
 两个前端各有独立的构建工作流（**仅上传 workflow artifact，不发布 Release**；
 正式发布应在打 tag 时另行全量构建）：
 
-- [Slint Dev Build](../../actions/workflows/build-slint.yml) → `micyou-slint-{linux-x64,windows-x64,macos-arm64}`
-  （自包含单文件，后端内嵌）
-- [Tauri Dev Build](../../actions/workflows/build-tauri.yml) → `micyou-tauri-{linux-x64,windows-x64,macos-arm64}`
-  （前端 + `micyou-daemon` sidecar 同包）
+- [Tauri Dev Build](../../actions/workflows/build-tauri.yml) → `micyou-tauri-{linux-x64,windows-x64,macos-arm64}`（前端 + daemon sidecar）
+- [Qt Dev Build](../../actions/workflows/build-qt.yml) → `micyou-qt-{linux-x64,windows-x64,macos-arm64}`（windeployqt/macdeployqt 打包 + daemon）
+- [Flutter Dev Build](../../actions/workflows/build-flutter.yml) → `micyou-flutter-web`（Web 产物 + Linux daemon，`--web-ui` 托管）
+- [Slint Dev Build](../../actions/workflows/build-slint.yml) → `micyou-slint-{linux-x64,windows-x64,macos-arm64}`（自包含单文件）
 
 在 Actions 页 **Run workflow** 触发，构建完成后于 run 页面底部 Artifacts 下载。
 两个工作流均启用 rust-cache（三 workspace 增量编译）。zip 内附 RUN-README.txt
@@ -47,10 +47,15 @@ MicYou 桌面端后端的独立重构：前后端分离、与 Tauri 解耦的无
 
 ## 参考前端（frontends/，独立 workspace，CI 三平台构建+无头 e2e 测试）
 
-| 前端 | 传输 | 形态 |
+| 前端 | 传输 | 设计语言 |
 |---|---|---|
-| [`frontends/slint`](./frontends/slint) | 进程内 local 通道（嵌入 `libmicyou::Builder`） | 单二进制原生 GUI：启动/停止/静音/耳返/电平表/事件日志 |
-| [`frontends/tauri`](./frontends/tauri) | stdio（spawn `micyou-daemon` sidecar） | Tauri 2 + 原生 JS webview（无 npm 工具链） |
+| [`frontends/tauri`](./frontends/tauri) | stdio（spawn `micyou-daemon` sidecar） | Web SPA：自定义深色 CSS、canvas 频谱、侧边栏 |
+| [`frontends/qt`](./frontends/qt) | stdio（spawn sidecar，QProcess） | Qt 原生 Widgets：菜单栏/工具栏/Dock 日志/系统控件外观 |
+| [`frontends/flutter`](./frontends/flutter) | WebSocket（daemon `--web-ui` 可直接托管其构建产物） | Material 3：NavigationRail、种子配色、CustomPaint 频谱 |
+| [`frontends/slint`](./frontends/slint) | 进程内 local 通道（嵌入 `libmicyou::Builder`） | 轻量嵌入式风格原生 GUI（单二进制） |
+
+四个前端都覆盖完整契约面（服务器/音频 DSP 含 10 段 EQ/连接与 IPv6 地址/虚拟设备/
+插件管理/设置/系统），但各自采用其框架的原生设计范式，而非同一界面的多框架复刻。
 
 ```bash
 # Slint（单进程嵌入后端）

@@ -1,0 +1,143 @@
+name: Qt Dev Build
+
+# Development build of the Qt 6 Widgets reference frontend + the
+# micyou-daemon sidecar it spawns. Artifacts only — no Release publishing.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qt-dev-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            platform: linux-x64
+          - os: windows-2022
+            platform: windows-x64
+          - os: macos-14
+            platform: macos-arm64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── daemon sidecar (Rust) ──────────────────────────────────────
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: . -> target
+          cache-on-failure: true
+      - name: Install Linux audio deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libasound2-dev
+      - name: Build daemon (release)
+        run: cargo build --release -p micyou-daemon
+
+      # ── Qt toolchain ───────────────────────────────────────────────
+      - name: Install Qt (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y qt6-base-dev
+      - name: Install Qt (Windows, aqt)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          pip install --quiet aqtinstall
+          aqt install-qt windows desktop 6.7.3 win64_msvc2022_64 -O C:\Qt
+      - name: Install Qt (macOS, brew)
+        if: runner.os == 'macOS'
+        run: brew install qt
+
+      # ── configure & build ──────────────────────────────────────────
+      - name: Configure (Linux)
+        if: runner.os == 'Linux'
+        working-directory: frontends/qt
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        working-directory: frontends/qt
+        run: cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_PREFIX_PATH="C:/Qt/6.7.3/msvc2022_64"
+      - name: Configure (macOS)
+        if: runner.os == 'macOS'
+        working-directory: frontends/qt
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$(brew --prefix qt)"
+      - name: Build
+        working-directory: frontends/qt
+        run: cmake --build build --config Release --parallel
+
+      # ── package ────────────────────────────────────────────────────
+      - name: Package (unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -eu
+          STAGE=stage/micyou-qt
+          mkdir -p "$STAGE"
+          cp target/release/micyou-daemon "$STAGE"/
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            APP=$(find frontends/qt/build -name "micyou-qt-frontend.app" -maxdepth 4 | head -1)
+            if [ -n "$APP" ]; then
+              "$(brew --prefix qt)/bin/macdeployqt" "$APP" || true
+              cp -R "$APP" "$STAGE"/
+            else
+              cp frontends/qt/build/micyou-qt-frontend "$STAGE"/
+            fi
+            cat > "$STAGE/RUN-README.txt" <<'NOTES'
+          MicYou Qt 前端 + 守护进程（开发构建，未签名）
+          首次运行: xattr -cr .
+          运行: open micyou-qt-frontend.app（或终端 ./micyou-qt-frontend/micyou-qt-frontend）
+          守护进程会被自动拉起（同目录 micyou-daemon，亦可 $MICYOU_DAEMON 指定）。
+          NOTES
+          else
+            cp frontends/qt/build/micyou-qt-frontend "$STAGE"/
+            cat > "$STAGE/RUN-README.txt" <<'NOTES'
+          MicYou Qt 前端 + 守护进程（开发构建）
+          依赖: sudo apt install libqt6widgets6 (Ubuntu 22.04+)
+          运行: ./micyou-qt-frontend   （自动拉起同目录 micyou-daemon --stdio）
+          日志: ~/.config/micyou/logs/daemon.log
+          NOTES
+          fi
+          { git rev-parse --short HEAD; date -u; } > "$STAGE/VERSION.txt"
+          (cd stage && zip -ry "../micyou-qt-${{ matrix.platform }}.zip" micyou-qt)
+          ls -la micyou-qt-*.zip
+
+      - name: Package (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $stage = "stage\micyou-qt"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item target\release\micyou-daemon.exe $stage
+          Copy-Item frontends\qt\build\Release\micyou-qt-frontend.exe $stage
+          & "C:\Qt\6.7.3\msvc2022_64\bin\windeployqt.exe" --release --no-translations "$stage\micyou-qt-frontend.exe"
+          (git rev-parse --short HEAD) + "`n" + (Get-Date).ToUniversalTime() | Set-Content $stage\VERSION.txt
+          @'
+          MicYou Qt 前端 + 守护进程（开发构建）
+
+          运行: micyou-qt-frontend.exe （自动拉起同目录 micyou-daemon.exe --stdio）
+          SmartScreen 提示时: 更多信息 → 仍要运行（未签名）。
+          若提示缺少 VCRUNTIME: 安装 "Microsoft Visual C++ 2015-2022 Redistributable (x64)"。
+          日志: %APPDATA%\micyou\logs\daemon.log
+          '@ | Set-Content -Encoding UTF8 $stage\RUN-README.txt
+          Compress-Archive -Path stage\micyou-qt -DestinationPath "micyou-qt-${{ matrix.platform }}.zip" -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: micyou-qt-${{ matrix.platform }}
+          path: micyou-qt-*.zip
+          if-no-files-found: error
