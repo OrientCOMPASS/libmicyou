@@ -681,6 +681,11 @@ impl AudioOutputManager {
     /// re-opened later. Used when the app process is exiting so the persistent
     /// virtual device is torn down without dropping the whole manager.
     pub fn close(&mut self) {
+        // WASAPI stream teardown must not run concurrently with another
+        // engine's device enumeration/stream creation in the same process
+        // (the Windows audio stack is not concurrency-safe; this raced in CI
+        // when a second backend started while the first one was closing).
+        let _device_guard = device_init_lock();
         self.stop_monitor_loopback();
         self.stream = None;
         self.producer = None;
