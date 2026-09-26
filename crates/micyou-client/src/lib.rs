@@ -77,6 +77,10 @@ enum Transport {
             >,
         >,
     },
+    /// In-process channel pair (e.g. `micyou_rpc::local::attach`).
+    Local {
+        inbound: mpsc::UnboundedSender<String>,
+    },
 }
 
 /// Client-side failures.

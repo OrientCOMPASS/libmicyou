@@ -22,11 +22,10 @@ path = "src/main.rs"
 slint-build = "1"
 
 [dependencies]
-slint = { version = "1", default-features = false, features = [
-  "std",
-  "backend-winit",
-  "renderer-software",
-] }
+# Default features (incl. the compat-1-x guard + winit/software/femtovg):
+# the software renderer is used at runtime via SLINT_BACKEND when there is
+# no GPU/display; tests never create a window.
+slint = "1"
 tokio = { version = "1", features = ["full"] }
 libmicyou = { path = "../../crates/libmicyou" }
 micyou-client = { path = "../../crates/micyou-client" }
