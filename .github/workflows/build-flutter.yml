@@ -67,12 +67,9 @@ jobs:
 
       - name: Generate desktop scaffolding
         working-directory: frontends/flutter
-        run: |
-          flutter config --no-analytics
-          flutter config --enable-linux-desktop --enable-windows-desktop --enable-macos-desktop || true
-          # creates the runner/ projects without touching lib/ or pubspec
-          flutter create --platforms=${{ matrix.flutter-platform }} \
-            --project-name micyou_flutter_frontend .
+        # single line: bash and pwsh both accept &&; desktop support is
+        # enabled by default in current Flutter stable
+        run: flutter config --no-analytics && flutter create --platforms=${{ matrix.flutter-platform }} --project-name micyou_flutter_frontend .
 
       - name: Build (release)
         working-directory: frontends/flutter
