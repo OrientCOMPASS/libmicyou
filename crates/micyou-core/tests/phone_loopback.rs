@@ -423,10 +423,6 @@ async fn phone_session_end_to_end() {
 #[allow(dead_code)]
 fn _type_anchor(_p: PongMessage) {}
 
-/// PongMessage re-export guard: keeps the import honest for future edits.
-#[allow(dead_code)]
-fn _type_anchor(_p: PongMessage) {}
-
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn phone_session_over_ipv6_loopback() {
     let _serial = scenario_lock();
