@@ -21,6 +21,7 @@ micyou-protocol.workspace = true
 micyou-audio = { workspace = true, features = ["dsp", "noise-suppression"] }
 micyou-plugin.workspace = true
 micyou-transport.workspace = true
+micyou-api.workspace = true
 
 serde.workspace = true
 serde_json.workspace = true

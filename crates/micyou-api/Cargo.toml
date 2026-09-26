@@ -8,7 +8,6 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-micyou-core.workspace = true
 micyou-transport.workspace = true
 micyou-audio.workspace = true
 micyou-plugin.workspace = true

@@ -931,7 +931,7 @@ impl PluginHostApi {
         active_audio_session: micyou_transport::udp::SharedActiveAudioSession,
         lifecycle: Arc<tokio::sync::Mutex<crate::lifecycle::ServerLifecycleState>>,
         #[cfg(feature = "web")] web_server: Arc<
-            tokio::sync::Mutex<Option<crate::web_server::WebServer>>,
+            tokio::sync::Mutex<Option<micyou_transport::web::WebServer>>,
         >,
         plugin_id: String,
         dir: std::path::PathBuf,

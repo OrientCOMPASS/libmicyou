@@ -47,6 +47,7 @@ pub mod platform;
 pub mod plugins;
 pub mod resources;
 pub mod server;
+pub mod sound;
 
 pub use audio_output::AudioOutputHandle;
 pub use events::{AecStatus, CoreTransportBridge, EventBus, ServerEvent, UiRequest};

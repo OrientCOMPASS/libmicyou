@@ -14,9 +14,11 @@
  */
 
 use micyou_audio::dsp::AudioDspSettings;
-use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
+
+/// Preference DTOs are part of the frontend contract (see `micyou-api`).
+pub use micyou_api::config::{ServerPrefs, ThemeColors, UiPrefs};
 
 /// Process-wide config directory override (daemon `--config-dir`, tests).
 static CONFIG_DIR_OVERRIDE: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
@@ -113,14 +115,6 @@ pub fn settings_json() -> serde_json::Value {
         .unwrap_or_else(|| serde_json::to_value(AudioDspSettings::default()).unwrap_or_default())
 }
 
-/// GUI UI preferences persisted to ui.json.
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[serde(rename_all = "camelCase", default)]
-pub struct UiPrefs {
-    pub language: String,
-    pub theme_color: String,
-}
-
 pub fn load_ui_prefs() -> UiPrefs {
     fs::read_to_string(ui_prefs_path())
         .ok()
@@ -136,19 +130,6 @@ pub fn save_ui_prefs(prefs: &UiPrefs) -> Result<(), String> {
     fs::write(ui_prefs_path(), json).map_err(|e| format!("write ui.json failed: {e}"))
 }
 
-/// Theme colors exported from the GUI for the TUI.
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[serde(rename_all = "camelCase", default)]
-pub struct ThemeColors {
-    pub primary: String,
-    pub secondary: String,
-    pub tertiary: String,
-    pub surface: String,
-    pub surface_variant: String,
-    pub on_surface: String,
-    pub error: String,
-}
-
 pub fn load_theme_colors() -> ThemeColors {
     fs::read_to_string(theme_path())
         .ok()
@@ -162,48 +143,6 @@ pub fn save_theme_colors(colors: &ThemeColors) -> Result<(), String> {
     let json =
         serde_json::to_string_pretty(colors).map_err(|e| format!("serialize theme failed: {e}"))?;
     fs::write(theme_path(), json).map_err(|e| format!("write theme.json failed: {e}"))
-}
-
-/// Connection-level settings shared between the GUI, CLI and TUI.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase", default)]
-pub struct ServerPrefs {
-    /// Streaming port for wifi/usb modes.
-    pub port: u16,
-    /// Port for the web (https) mode.
-    pub web_port: u16,
-    /// Connection mode: wifi | usb | web.
-    pub mode: String,
-    /// Bind address ("0.0.0.0" when auto-bind).
-    pub bind_address: String,
-    /// Whether to listen on all interfaces.
-    pub auto_bind: bool,
-    /// Selected output audio device name.
-    pub output_device: String,
-    /// Whether mute state is synchronized with the mobile client in both
-    /// directions. When false, the desktop neither sends its mute state to
-    /// the phone nor applies mute state received from it. Defaults to true,
-    /// including for server.json files written before this field existed.
-    #[serde(default = "default_mute_sync")]
-    pub mute_sync: bool,
-}
-
-fn default_mute_sync() -> bool {
-    true
-}
-
-impl Default for ServerPrefs {
-    fn default() -> Self {
-        Self {
-            port: 8554,
-            web_port: 8443,
-            mode: "wifi".to_string(),
-            bind_address: "0.0.0.0".to_string(),
-            auto_bind: true,
-            output_device: String::new(),
-            mute_sync: true,
-        }
-    }
 }
 
 /// Load connection settings from server.json, falling back to defaults.

@@ -50,7 +50,7 @@ tokio-util = "0.7.18"
 tokio-stream = "0.1"
 futures-util = "0.3"
 bytes = "1.11.1"
-log = "0.4.32"
+log = { version = "0.4.32", features = ["std"] }
 semver = "1"
 thiserror = "2"
 

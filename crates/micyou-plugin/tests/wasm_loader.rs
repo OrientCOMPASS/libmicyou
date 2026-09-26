@@ -368,12 +368,11 @@ fn wasm_plugin_missing_optional_exports_are_skipped() {
 /// docs and CI stay honest.
 #[test]
 fn example_manifests_validate() {
-    let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+    // libmicyou layout: crates/micyou-plugin → crates → repo root
+    let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .and_then(|p| p.parent())
         .expect("workspace layout");
-    // repo root is tauri-app/.. (two levels above crates/micyou-plugin)
-    let repo_root = workspace_root.parent().expect("repo layout");
     for (dir, id) in [
         (
             "plugins/examples/native-soundpad",

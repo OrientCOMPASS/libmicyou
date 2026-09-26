@@ -29,10 +29,11 @@ use crate::stats::AudioMetrics;
 use crate::tcp::DeviceInfo;
 
 /// Connection mode of the running server.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum TransportMode {
     /// LAN streaming from the mobile app (mDNS discovery).
+    #[default]
     Wifi,
     /// USB streaming via `adb reverse` port forwarding.
     Usb,

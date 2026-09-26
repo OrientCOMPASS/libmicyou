@@ -254,7 +254,7 @@ pub async fn install(progress: ProgressFn) -> VBCableResult {
         };
     }
 
-    let result = install_inner(&events).await;
+    let result = install_inner(&progress).await;
     IS_INSTALLING.store(false, Ordering::SeqCst);
 
     match &result {
@@ -278,7 +278,7 @@ pub async fn install(progress: ProgressFn) -> VBCableResult {
 async fn install_inner(progress: &ProgressFn) -> VBCableResult {
     if is_installed() {
         progress("Configuring devices...".to_string());
-        if let Err(e) = configure_devices(events).await {
+        if let Err(e) = configure_devices(&progress).await {
             return VBCableResult {
                 success: true,
                 error_type: Some("config_failed".to_string()),
@@ -292,7 +292,7 @@ async fn install_inner(progress: &ProgressFn) -> VBCableResult {
         };
     }
 
-    let installer_path = match download_installer(events).await {
+    let installer_path = match download_installer(&progress).await {
         Ok(p) => p,
         Err(e) => {
             return VBCableResult {
@@ -328,7 +328,7 @@ async fn install_inner(progress: &ProgressFn) -> VBCableResult {
         };
     }
 
-    if let Err(e) = configure_devices(events).await {
+    if let Err(e) = configure_devices(&progress).await {
         return VBCableResult {
             success: true,
             error_type: Some("config_failed".to_string()),

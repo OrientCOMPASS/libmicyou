@@ -15,7 +15,10 @@
 //! Core event bus.
 //!
 //! Everything the backend wants to tell the outside world (frontends over
-//! RPC, embedded hosts, plugins) is published here as a [`ServerEvent`].
+//! RPC, embedded hosts, plugins) is published here as a [`ServerEvent`] —
+//! the contract types live in [`micyou_api::events`] so client SDKs need no
+//! dependency on the backend stack.
+//!
 //! The bus replaces the upstream `ServerEvents` trait-object sink chain:
 //! instead of every frontend implementing a trait against the server core,
 //! consumers subscribe to one broadcast channel and filter by event type.
@@ -24,82 +27,21 @@
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
 
-use micyou_audio::AecFailure;
 use micyou_transport::events::ControlChannel;
 use micyou_transport::stats::AudioMetrics;
 use micyou_transport::tcp::DeviceInfo;
 use micyou_transport::TransportMode;
-use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
+
+/// The event catalogue is the frontend contract — re-exported from the API
+/// crate so backend and clients agree on one definition.
+pub use micyou_api::events::{AecStatus, ServerEvent, UiRequest};
 
 /// Capacity of the broadcast channel. High-frequency events (audio level at
 /// ~8 Hz, metrics at 1 Hz) mean a subscriber stalled for seconds will lag;
 /// lagged receivers resynchronize on the next event rather than blocking
 /// publishers.
 const EVENT_BUS_CAPACITY: usize = 512;
-
-/// Events published by the backend core.
-///
-/// Serialized as `{"type": "<camelCase tag>", "data": <payload>}`; this shape
-/// is part of the frontend contract (see `micyou-api`).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", content = "data", rename_all = "camelCase")]
-pub enum ServerEvent {
-    /// A device (phone/web client) became the active audio source.
-    DeviceConnected { device: DeviceInfo },
-    /// The active device disconnected.
-    DeviceDisconnected,
-    /// Periodic network/audio metrics while streaming.
-    AudioMetrics { metrics: AudioMetrics },
-    /// Processed output level, 0..=100 (≈8 Hz while streaming).
-    AudioLevel { level: u32 },
-    /// Raw + processed spectrum bands (only while spectrum streaming is on).
-    AudioSpectrum { raw: Vec<f32>, processed: Vec<f32> },
-    /// Hard-mute state changed (any source: RPC, plugin, phone).
-    MuteStateChanged { muted: bool },
-    /// Ear-return monitoring toggled.
-    MonitoringChanged { enabled: bool },
-    /// Spectrum streaming toggled.
-    SpectrumStreamingChanged { enabled: bool },
-    /// The audio server stopped (spontaneously or via RPC).
-    ServerStopped,
-    /// Web-mode browser client count changed.
-    WebClientCount { count: u32 },
-    /// TCP up but no UDP audio for >10 s (firewall hint, Windows wifi).
-    UdpAudioWarning,
-    /// Acoustic echo cancellation availability changed.
-    AecStatusChanged { status: AecStatus },
-    /// VB-CABLE installer progress line.
-    InstallProgress { message: String },
-    /// A UI-only action requested by the backend (or a plugin) that only a
-    /// graphical frontend can fulfil.
-    UiRequest { request: UiRequest },
-    /// A plugin was enabled/disabled/installed/uninstalled; frontends should
-    /// refresh their plugin list. Payload is the plugin id.
-    PluginListChanged { plugin_id: String },
-    /// A plugin wrote a log line (mirrors the in-memory plugin log ring).
-    PluginLog {
-        plugin_id: String,
-        level: String,
-        message: String,
-    },
-}
-
-/// AEC availability/state snapshot.
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct AecStatus {
-    pub available: bool,
-    pub enabled: bool,
-    pub reason: Option<AecFailure>,
-}
-
-/// UI-side actions the backend cannot perform headlessly.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "camelCase")]
-pub enum UiRequest {
-    /// Open a plugin's panel in a frontend-owned window.
-    OpenPluginPanel { plugin_id: String, panel_id: String },
-}
 
 /// Fan-out broadcast bus for [`ServerEvent`]s.
 #[derive(Clone)]
@@ -250,23 +192,6 @@ mod tests {
         let bus = EventBus::default();
         bus.publish(ServerEvent::ServerStopped);
         assert_eq!(bus.receiver_count(), 0);
-    }
-
-    #[test]
-    fn events_serialize_with_camel_case_tags() {
-        let json = serde_json::to_value(ServerEvent::MuteStateChanged { muted: true }).unwrap();
-        assert_eq!(json["type"], "muteStateChanged");
-        assert_eq!(json["data"]["muted"], true);
-
-        let json = serde_json::to_value(ServerEvent::UiRequest {
-            request: UiRequest::OpenPluginPanel {
-                plugin_id: "p".into(),
-                panel_id: "panel".into(),
-            },
-        })
-        .unwrap();
-        assert_eq!(json["type"], "uiRequest");
-        assert_eq!(json["data"]["request"]["kind"], "openPluginPanel");
     }
 
     #[test]
