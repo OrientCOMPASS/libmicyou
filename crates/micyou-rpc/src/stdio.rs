@@ -55,7 +55,11 @@ pub async fn serve_stdio(service: Arc<RpcService>) -> std::io::Result<()> {
     }
 
     log::info!("[rpc] stdio session {} detached (eof)", session.id);
+    // Detach and DROP the session so the outbound channel closes; the writer
+    // task then drains any queued responses (e.g. the reply to the final
+    // request that arrived together with EOF) and exits on its own.
     service.sessions.remove(session.id);
-    writer.abort();
+    drop(session);
+    let _ = writer.await;
     Ok(())
 }

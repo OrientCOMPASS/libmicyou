@@ -98,6 +98,9 @@ async fn handle_socket(socket: WebSocket, service: Arc<RpcService>) {
     }
 
     log::info!("[rpc] websocket session {} detached", session.id);
+    // Drop the session to close the outbound channel; the send task drains
+    // queued frames before finishing.
     service.sessions.remove(session.id);
-    send_task.abort();
+    drop(session);
+    let _ = send_task.await;
 }

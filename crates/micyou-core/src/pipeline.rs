@@ -125,7 +125,9 @@ pub fn ensure_audio_output_started(
 pub fn shutdown_audio_output(output: &Arc<AudioOutputHandle>) {
     output.shutdown();
     #[cfg(target_os = "linux")]
-    crate::platform::pipewire::cleanup();
+    if crate::platform::pipewire::is_setup() {
+        crate::platform::pipewire::cleanup();
+    }
 }
 
 fn publish_aec(bus: &EventBus, available: bool, enabled: bool, reason: Option<AecFailure>) {
