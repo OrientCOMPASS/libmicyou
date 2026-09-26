@@ -35,13 +35,11 @@ bool Session::start(QString *errorOut)
 
     QString program;
     QStringList candidates;
-    const QString exe = QStringLiteral(
 #ifdef Q_OS_WIN
-        "micyou-daemon.exe"
+    const QString exe = QStringLiteral("micyou-daemon.exe");
 #else
-        "micyou-daemon"
+    const QString exe = QStringLiteral("micyou-daemon");
 #endif
-    );
     const QString fromEnv = qEnvironmentVariable("MICYOU_DAEMON");
     if (!fromEnv.isEmpty())
         candidates << fromEnv;
