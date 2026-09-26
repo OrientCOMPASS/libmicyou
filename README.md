@@ -38,7 +38,7 @@ MicYou 桌面端后端的独立重构：前后端分离、与 Tauri 解耦的无
 
 - [Tauri Dev Build](../../actions/workflows/build-tauri.yml) → `micyou-tauri-{linux-x64,windows-x64,macos-arm64}`（前端 + daemon sidecar）
 - [Qt Dev Build](../../actions/workflows/build-qt.yml) → `micyou-qt-{linux-x64,windows-x64,macos-arm64}`（windeployqt/macdeployqt 打包 + daemon）
-- [Flutter Dev Build](../../actions/workflows/build-flutter.yml) → `micyou-flutter-web`（Web 产物 + Linux daemon，`--web-ui` 托管）
+- [Flutter Dev Build](../../actions/workflows/build-flutter.yml) → `micyou-flutter-{linux-x64,windows-x64,macos-arm64}`（桌面包 + daemon sidecar）
 - [Slint Dev Build](../../actions/workflows/build-slint.yml) → `micyou-slint-{linux-x64,windows-x64,macos-arm64}`（自包含单文件）
 
 在 Actions 页 **Run workflow** 触发，构建完成后于 run 页面底部 Artifacts 下载。
@@ -51,7 +51,7 @@ MicYou 桌面端后端的独立重构：前后端分离、与 Tauri 解耦的无
 |---|---|---|
 | [`frontends/tauri`](./frontends/tauri) | stdio（spawn `micyou-daemon` sidecar） | Web SPA：自定义深色 CSS、canvas 频谱、侧边栏 |
 | [`frontends/qt`](./frontends/qt) | stdio（spawn sidecar，QProcess） | Qt 原生 Widgets：菜单栏/工具栏/Dock 日志/系统控件外观 |
-| [`frontends/flutter`](./frontends/flutter) | WebSocket（daemon `--web-ui` 可直接托管其构建产物） | Material 3：NavigationRail、种子配色、CustomPaint 频谱 |
+| [`frontends/flutter`](./frontends/flutter) | stdio sidecar（dart:io Process spawn daemon）；可选远程 WebSocket | Material 3 桌面端：NavigationRail、种子配色、CustomPaint 频谱 |
 | [`frontends/slint`](./frontends/slint) | 进程内 local 通道（嵌入 `libmicyou::Builder`） | 轻量嵌入式风格原生 GUI（单二进制） |
 
 四个前端都覆盖完整契约面（服务器/音频 DSP 含 10 段 EQ/连接与 IPv6 地址/虚拟设备/

@@ -10,8 +10,10 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -29,9 +31,92 @@ class RpcError implements Exception {
   String toString() => message;
 }
 
+/// Line-oriented JSON transport. Desktop builds talk to a spawned
+/// micyou-daemon over stdio (the real-desktop-app pattern, same as the
+/// Tauri/Qt frontends); a WebSocket transport remains for remote backends.
+abstract class JsonTransport {
+  void send(String line);
+  Stream<String> get lines;
+  Future<void> close();
+}
+
+class WsTransport implements JsonTransport {
+  WsTransport(this._channel);
+  final WebSocketChannel _channel;
+
+  @override
+  void send(String line) => _channel.sink.add(line);
+
+  @override
+  Stream<String> get lines => _channel.stream.cast<String>();
+
+  @override
+  Future<void> close() => _channel.sink.close();
+}
+
+class StdioTransport implements JsonTransport {
+  StdioTransport(this._process) {
+    _lineStream =
+        _process.stdout.transform(utf8.decoder).transform(const LineSplitter());
+    _process.stderr
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .listen((l) {
+      // Daemon logs normally go to its file; surface stray stderr lines.
+      debugPrint('daemon: $l');
+    });
+  }
+
+  final Process _process;
+  late final Stream<String> _lineStream;
+
+  @override
+  void send(String line) {
+    _process.stdin.write('$line\n');
+    unawaited(_process.stdin.flush());
+  }
+
+  @override
+  Stream<String> get lines => _lineStream;
+
+  @override
+  Future<void> close() async {
+    // EOF on stdin makes the daemon shut down gracefully; kill as a fallback.
+    try {
+      await _process.stdin.close();
+    } catch (_) {}
+    final exited = await _process.exitCode
+        .timeout(const Duration(seconds: 3), onTimeout: () => -1);
+    if (exited == -1) _process.kill();
+  }
+}
+
+/// Locate the daemon binary: $MICYOU_DAEMON → next to this executable →
+/// platform bundle-relative spots → bare name (PATH).
+String daemonExecutable() {
+  final exeName =
+      Platform.isWindows ? 'micyou-daemon.exe' : 'micyou-daemon';
+  final fromEnv = Platform.environment['MICYOU_DAEMON'];
+  if (fromEnv != null && fromEnv.isNotEmpty && File(fromEnv).existsSync()) {
+    return fromEnv;
+  }
+  final exeDir = File(Platform.resolvedExecutable).parent;
+  final candidates = <String>[
+    '${exeDir.path}${Platform.pathSeparator}$exeName',
+    // linux: zip root holds the daemon, bundle lives in app/
+    '${exeDir.parent.path}${Platform.pathSeparator}$exeName',
+    // macOS .app: Contents/MacOS → Contents → MyApp.app → containing dir
+    '${exeDir.parent.parent.parent.path}${Platform.pathSeparator}$exeName',
+  ];
+  for (final c in candidates) {
+    if (File(c).existsSync()) return c;
+  }
+  return exeName; // resolved through PATH by Process.start
+}
+
 class BackendClient {
-  BackendClient(this._channel) {
-    _channel.stream.listen(
+  BackendClient(this._transport) {
+    _transport.lines.listen(
       _onMessage,
       onDone: () {
         _connected = false;
@@ -46,7 +131,7 @@ class BackendClient {
     _connected = true;
   }
 
-  final WebSocketChannel _channel;
+  final JsonTransport _transport;
   final Map<int, Completer<dynamic>> _pending = <int, Completer<dynamic>>{};
   final StreamController<Map<String, dynamic>> _events =
       StreamController<Map<String, dynamic>>.broadcast();
@@ -56,17 +141,30 @@ class BackendClient {
   bool get connected => _connected;
   Stream<Map<String, dynamic>> get events => _events.stream;
 
-  static Future<BackendClient> connect(String url) async {
+  /// Connect to a remote daemon over WebSocket (`ws://host:port/rpc`).
+  static Future<BackendClient> connectWs(String url) async {
     final channel = WebSocketChannel.connect(Uri.parse(url));
     await channel.ready;
-    return BackendClient(channel);
+    return BackendClient(WsTransport(channel));
+  }
+
+  /// Spawn the local daemon as a sidecar child (stdio JSON-RPC), like the
+  /// real MicYou desktop app does. The child is closed when the client is.
+  static Future<BackendClient> connectSidecar() async {
+    final program = daemonExecutable();
+    final process = await Process.start(
+      program,
+      <String>['--stdio', '--no-mode-lock'],
+      mode: ProcessStartMode.normal,
+    );
+    return BackendClient(StdioTransport(process));
   }
 
   Future<dynamic> call(String method, [Map<String, dynamic>? params]) {
     final id = _nextId++;
     final completer = Completer<dynamic>();
     _pending[id] = completer;
-    _channel.sink.add(jsonEncode(<String, dynamic>{
+    _transport.send(jsonEncode(<String, dynamic>{
       'jsonrpc': '2.0',
       'id': id,
       'method': method,
@@ -118,7 +216,7 @@ class BackendClient {
   }
 
   Future<void> close() async {
-    await _channel.sink.close();
+    await _transport.close();
   }
 }
 
@@ -183,8 +281,15 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> connect(String url) async {
-    final c = await BackendClient.connect(url);
+  Future<void> connectSidecar() async {
+    await _finishConnect(await BackendClient.connectSidecar(), '本地守护进程（stdio sidecar）');
+  }
+
+  Future<void> connectWs(String url) async {
+    await _finishConnect(await BackendClient.connectWs(url), url);
+  }
+
+  Future<void> _finishConnect(BackendClient c, String label) async {
     client = c;
     hello = Map<String, dynamic>.from(
         await c.call('session/hello', <String, dynamic>{'name': 'flutter-frontend', 'ui': true}) as Map);
@@ -192,7 +297,7 @@ class AppState extends ChangeNotifier {
       'events': <String>['*'],
     });
     c.events.listen(_onEvent);
-    addLog('已连接: ${hello['backend']} ${hello['version']} (api v${hello['apiVersion']}, $os)');
+    addLog('已连接[$label]: ${hello['backend']} ${hello['version']} (api v${hello['apiVersion']}, $os)');
     await refreshStatus();
     await loadPrefs();
     notifyListeners();
@@ -388,15 +493,7 @@ class MicYouApp extends StatelessWidget {
   }
 }
 
-String defaultWsUrl() {
-  final base = Uri.base;
-  if (base.scheme == 'http' || base.scheme == 'https') {
-    final wsScheme = base.scheme == 'https' ? 'wss' : 'ws';
-    final port = base.hasPort && base.port != 80 && base.port != 443 ? ':${base.port}' : '';
-    return '$wsScheme://${base.host}$port/rpc';
-  }
-  return 'ws://127.0.0.1:9610/rpc';
-}
+const String defaultWsUrl = 'ws://127.0.0.1:9610/rpc';
 
 class ConnectPage extends StatefulWidget {
   const ConnectPage({super.key});
@@ -406,27 +503,47 @@ class ConnectPage extends StatefulWidget {
 }
 
 class _ConnectPageState extends State<ConnectPage> {
-  final TextEditingController _url = TextEditingController(text: defaultWsUrl());
+  final TextEditingController _url = TextEditingController(text: defaultWsUrl);
   final AppState _state = AppState();
   bool _connecting = false;
   String? _error;
 
-  Future<void> _connect() async {
+  Future<void> _connectWs() async {
     setState(() {
       _connecting = true;
       _error = null;
     });
     try {
-      await _state.connect(_url.text.trim());
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(MaterialPageRoute<void>(
-        builder: (_) => HomePage(state: _state),
-      ));
+      await _state.connectWs(_url.text.trim());
+      _enter();
     } catch (e) {
       setState(() => _error = '$e');
     } finally {
       if (mounted) setState(() => _connecting = false);
     }
+  }
+
+  Future<void> _connectSidecar() async {
+    setState(() {
+      _connecting = true;
+      _error = null;
+    });
+    try {
+      await _state.connectSidecar();
+      _enter();
+    } catch (e) {
+      setState(() => _error = '无法启动本地守护进程: $e\n'
+          '（确认 micyou-daemon 与应用同目录、在 PATH 中，或用 MICYOU_DAEMON 环境变量指定）');
+    } finally {
+      if (mounted) setState(() => _connecting = false);
+    }
+  }
+
+  void _enter() {
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(MaterialPageRoute<void>(
+      builder: (_) => HomePage(state: _state),
+    ));
   }
 
   @override
@@ -450,32 +567,41 @@ class _ConnectPageState extends State<ConnectPage> {
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.headlineSmall),
                   const SizedBox(height: 4),
-                  Text('Flutter (Material 3) 参考前端 — WebSocket JSON-RPC',
+                  Text('Flutter (Material 3) 桌面参考前端 — sidecar stdio / WebSocket JSON-RPC',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodySmall),
                   const SizedBox(height: 24),
+                  FilledButton.icon(
+                    onPressed: _connecting ? null : _connectSidecar,
+                    icon: _connecting
+                        ? const SizedBox(
+                            width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.desktop_windows),
+                    label: const Text('启动本地守护进程（sidecar）'),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('或连接远程后端（daemon --ws 127.0.0.1:9610）：',
+                      style: Theme.of(context).textTheme.bodySmall),
+                  const SizedBox(height: 8),
                   TextField(
                     controller: _url,
                     decoration: const InputDecoration(
-                      labelText: '后端地址',
-                      helperText: '先启动: micyou-daemon --ws 127.0.0.1:9610',
+                      labelText: 'WebSocket 地址',
                       border: OutlineInputBorder(),
                       prefixIcon: Icon(Icons.link),
+                      isDense: true,
                     ),
-                    onSubmitted: (_) => _connect(),
+                    onSubmitted: (_) => _connectWs(),
                   ),
                   if (_error != null) ...<Widget>[
                     const SizedBox(height: 12),
                     Text(_error!, style: TextStyle(color: scheme.error)),
                   ],
                   const SizedBox(height: 20),
-                  FilledButton.icon(
-                    onPressed: _connecting ? null : _connect,
-                    icon: _connecting
-                        ? const SizedBox(
-                            width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.login),
-                    label: Text(_connecting ? '连接中…' : '连接后端'),
+                  OutlinedButton.icon(
+                    onPressed: _connecting ? null : _connectWs,
+                    icon: const Icon(Icons.login),
+                    label: const Text('连接 WebSocket'),
                   ),
                 ],
               ),
