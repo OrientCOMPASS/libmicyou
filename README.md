@@ -31,6 +31,26 @@ MicYou 桌面端后端的独立重构：前后端分离、与 Tauri 解耦的无
 | [`micyou-daemon`](crates/micyou-daemon) | 无头守护进程二进制 |
 | [`libmicyou`](crates/libmicyou) | 门面 crate：`Backend` 构建器，可嵌入任意 Rust 宿主 |
 
+## 参考前端（frontends/，独立 workspace，CI 三平台构建+无头 e2e 测试）
+
+| 前端 | 传输 | 形态 |
+|---|---|---|
+| [`frontends/slint`](./frontends/slint) | 进程内 local 通道（嵌入 `libmicyou::Builder`） | 单二进制原生 GUI：启动/停止/静音/耳返/电平表/事件日志 |
+| [`frontends/tauri`](./frontends/tauri) | stdio（spawn `micyou-daemon` sidecar） | Tauri 2 + 原生 JS webview（无 npm 工具链） |
+
+```bash
+# Slint（单进程嵌入后端）
+cd frontends/slint && cargo run
+
+# Tauri（自动 spawn 同目录/PATH/$MICYOU_DAEMON 的守护进程）
+cd frontends/tauri && cargo run
+```
+
+两个前端的控制器逻辑均与 GUI 解耦，可在 CI 无显示环境下跑完整
+「连接→启动→静音→监听→停止」回归（`cargo test`）；后端另有协议级集成测试
+`phone_loopback`（模拟 Android 客户端全链路：握手/会话绑定/ping-pong/UDP 音频/
+静音同步/插件消息/同端口重启）。
+
 ## 文档
 
 - [PLAN.md](./PLAN.md) — 重构路线图与现状分析
