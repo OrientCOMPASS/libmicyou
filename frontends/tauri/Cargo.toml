@@ -1,0 +1,32 @@
+[package]
+name = "micyou-tauri-frontend"
+description = "Tauri 2 reference frontend for the libmicyou backend (spawns micyou-daemon as a stdio sidecar)"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+publish = false
+
+# Standalone workspace (mirrors a real third-party frontend consuming
+# libmicyou through path/git dependencies).
+[workspace]
+
+[lib]
+name = "micyou_tauri_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "micyou-tauri-frontend"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+micyou-client = { path = "../../crates/micyou-client" }
+micyou-api = { path = "../../crates/micyou-api" }
+libmicyou = { path = "../../crates/libmicyou" }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+log = { version = "0.4", features = ["std"] }

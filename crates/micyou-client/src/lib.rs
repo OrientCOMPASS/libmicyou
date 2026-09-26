@@ -28,7 +28,8 @@
 //! let status = client.server_status().await?;
 //! println!("server phase: {}", status.phase);
 //!
-//! while let Ok(event) = client.events.recv().await {
+//! let mut events = client.events();
+//! while let Ok(event) = events.recv().await {
 //!     println!("event: {}", event.tag());
 //! }
 //! # Ok(())
@@ -114,8 +115,7 @@ pub struct Client {
     transport: Arc<Transport>,
     next_id: AtomicI64,
     pending: Arc<Mutex<HashMap<i64, oneshot::Sender<Result<Value, RpcError>>>>>,
-    /// Backend events (all of them; filter locally as needed).
-    pub events: broadcast::Receiver<Arc<ServerEvent>>,
+    event_bus: broadcast::Sender<Arc<ServerEvent>>,
     /// Raw notification lines that are not events (future extensions).
     _raw_notifications: mpsc::UnboundedReceiver<Value>,
 }
@@ -146,7 +146,7 @@ impl Client {
             child,
         });
 
-        let (event_bus, events) = broadcast::channel(256);
+        let (event_bus, _) = broadcast::channel(256);
         let (raw_tx, raw_notifications) = mpsc::unbounded_channel();
         let pending: Arc<Mutex<HashMap<i64, oneshot::Sender<Result<Value, RpcError>>>>> =
             Arc::new(Mutex::new(HashMap::new()));
@@ -167,7 +167,7 @@ impl Client {
             transport,
             next_id: AtomicI64::new(1),
             pending,
-            events,
+            event_bus,
             _raw_notifications: raw_notifications,
         })
     }
@@ -184,7 +184,7 @@ impl Client {
             sink: Arc::new(Mutex::new(sink)),
         });
 
-        let (event_bus, events) = broadcast::channel(256);
+        let (event_bus, _) = broadcast::channel(256);
         let (raw_tx, raw_notifications) = mpsc::unbounded_channel();
         let pending: Arc<Mutex<HashMap<i64, oneshot::Sender<Result<Value, RpcError>>>>> =
             Arc::new(Mutex::new(HashMap::new()));
@@ -210,9 +210,47 @@ impl Client {
             transport,
             next_id: AtomicI64::new(1),
             pending,
-            events,
+            event_bus,
             _raw_notifications: raw_notifications,
         })
+    }
+
+    /// Attach to an in-process backend (channel pair from
+    /// `micyou_rpc::local::attach` / `Managed::attach_local`).
+    pub fn connect_channels(
+        inbound: mpsc::UnboundedSender<String>,
+        outbound: mpsc::UnboundedReceiver<String>,
+    ) -> Self {
+        let (event_bus, _) = broadcast::channel(256);
+        let (raw_tx, raw_notifications) = mpsc::unbounded_channel();
+        let pending: Arc<Mutex<HashMap<i64, oneshot::Sender<Result<Value, RpcError>>>>> =
+            Arc::new(Mutex::new(HashMap::new()));
+
+        {
+            let pending = pending.clone();
+            let event_bus = event_bus.clone();
+            let raw_tx = raw_tx.clone();
+            let mut outbound = outbound;
+            tokio::spawn(async move {
+                while let Some(line) = outbound.recv().await {
+                    route_inbound_line(&line, &pending, &event_bus, &raw_tx).await;
+                }
+            });
+        }
+
+        Self {
+            transport: Arc::new(Transport::Local { inbound }),
+            next_id: AtomicI64::new(1),
+            pending,
+            event_bus,
+            _raw_notifications: raw_notifications,
+        }
+    }
+
+    /// Subscribe to the backend event stream. May be called multiple times
+    /// (each call yields an independent broadcast receiver).
+    pub fn events(&self) -> broadcast::Receiver<Arc<ServerEvent>> {
+        self.event_bus.subscribe()
     }
 
     // ── raw plumbing ───────────────────────────────────────────────────────
@@ -278,6 +316,9 @@ impl Client {
                     .map_err(|e| ClientError::Transport(e.to_string()))?;
                 Ok(())
             }
+            Transport::Local { inbound } => inbound
+                .send(line)
+                .map_err(|_| ClientError::Transport("local channel closed".into())),
         }
     }
 

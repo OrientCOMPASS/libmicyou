@@ -1,0 +1,118 @@
+import { Button, CheckBox, GroupBox, LineEdit } from "std-widgets.slint";
+
+export component MainWindow inherits Window {
+    title: "MicYou · Slint Frontend (libmicyou)";
+    background: #14161a;
+    default-font-size: 13px;
+
+    in-out property <string> phase: "stopped";
+    in-out property <bool> connected: false;
+    in-out property <bool> muted: false;
+    in-out property <bool> monitoring: false;
+    in-out property <float> level: 0;
+    in-out property <string> level-text: "Level: --";
+    in-out property <string> port: "18554";
+    in-out property <string> mode: "wifi";
+    in-out property <string> message: "";
+
+    callback start-clicked(string, string);
+    callback stop-clicked();
+    callback mute-toggled(bool);
+    callback monitoring-toggled(bool);
+
+    VerticalLayout {
+        alignment: start;
+        spacing: 10px;
+        padding: 14px;
+
+        Text {
+            text: "libmicyou backend — Slint frontend (in-process JSON-RPC)";
+            color: #e8eaee;
+            font-size: 15px;
+        }
+
+        GroupBox {
+            title: "Server";
+            VerticalLayout {
+                spacing: 8px;
+                HorizontalLayout {
+                    spacing: 6px;
+                    Text { text: "Port:"; color: #c6cad2; vertical-alignment: center; }
+                    LineEdit { text <=> root.port; placeholder-text: "18554"; }
+                    Text { text: "Mode:"; color: #c6cad2; vertical-alignment: center; }
+                    LineEdit { text <=> root.mode; placeholder-text: "wifi | usb | web"; }
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    Button {
+                        text: "Start";
+                        primary: true;
+                        clicked => { root.start-clicked(root.port, root.mode); }
+                    }
+                    Button {
+                        text: "Stop";
+                        clicked => { root.stop-clicked(); }
+                    }
+                }
+                Text {
+                    text: "State: " + root.phase + (root.connected ? "  ·  Device connected" : "  ·  No device");
+                    color: root.connected ? #7ec87e : #c6cad2;
+                }
+            }
+        }
+
+        GroupBox {
+            title: "Audio";
+            VerticalLayout {
+                spacing: 8px;
+                CheckBox {
+                    text: "Mute (hard)";
+                    checked <=> root.muted;
+                    toggled => { root.mute-toggled(self.checked); }
+                }
+                CheckBox {
+                    text: "Monitoring (ear-return)";
+                    checked <=> root.monitoring;
+                    toggled => { root.monitoring-toggled(self.checked); }
+                }
+                Rectangle {
+                    height: 18px;
+                    border-radius: 4px;
+                    background: #23262d;
+                    clip: true;
+                    Rectangle {
+                        x: 0;
+                        y: 0;
+                        height: parent.height;
+                        width: parent.width * min(max(root.level, 0), 100) / 100;
+                        background: root.muted ? #6b6f78 : #4caf50;
+                    }
+                }
+                Text { text: root.level-text; color: #c6cad2; }
+            }
+        }
+
+        GroupBox {
+            title: "Log";
+            vertical-stretch: 1;
+            Rectangle {
+                height: 100%;
+                min-height: 110px;
+                background: #1b1e24;
+                border-radius: 4px;
+                clip: true;
+                Flickable {
+                    viewport-height: log-text.preferred-height + 8px;
+                    log-text := Text {
+                        x: 6px;
+                        y: 4px;
+                        width: parent.width - 12px;
+                        wrap: word-wrap;
+                        text: root.message;
+                        color: #9aa3b2;
+                    }
+                }
+            }
+        }
+    }
+}

@@ -46,3 +46,6 @@ libc.workspace = true
 [target.'cfg(windows)'.dependencies]
 winapi.workspace = true
 winreg.workspace = true
+
+[dev-dependencies]
+prost.workspace = true
