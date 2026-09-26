@@ -451,7 +451,10 @@ impl Listener for TlsListener {
                 Some(accepted) = self.completed_rx.recv() => return accepted,
                 Some(accept_result) = tokio_stream::StreamExt::next(&mut self.tcp) => {
                     match accept_result {
-                        Ok((stream, addr)) => {
+                        Ok(stream) => {
+                            let addr = stream
+                                .peer_addr()
+                                .unwrap_or_else(|_| SocketAddr::from(([0, 0, 0, 0], 0)));
                             let permit = match self.handshake_slots.clone().try_acquire_owned() {
                                 Ok(permit) => permit,
                                 Err(_) => continue,

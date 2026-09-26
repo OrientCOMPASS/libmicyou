@@ -175,8 +175,20 @@ pub async fn start_tcp_server(
                 }
             }
             Some(accept_result) = tokio_stream::StreamExt::next(&mut incoming) => {
-                match accept_result {
-                    Ok((socket, addr)) => {
+                let (socket, addr) = match accept_result {
+                    Ok(socket) => match socket.peer_addr() {
+                        Ok(addr) => (socket, addr),
+                        Err(e) => {
+                            log::warn!("Failed to read peer address: {}", e);
+                            continue;
+                        }
+                    },
+                    Err(e) => {
+                        log::error!("Failed to accept TCP connection: {}", e);
+                        continue;
+                    }
+                };
+                {
                         // Control frames (ping/pong) are ~60 bytes; without
                         // TCP_NODELAY, Nagle aggregation adds up to ~40ms of
                         // jitter to the RTT reading. On USB mode the real
@@ -219,8 +231,6 @@ pub async fn start_tcp_server(
                             }
                             log::info!("Client {} disconnected", addr);
                         });
-                    }
-                    Err(e) => log::error!("Failed to accept TCP connection: {}", e),
                 }
             }
         }
