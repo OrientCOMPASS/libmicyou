@@ -1,0 +1,130 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/micyou-protocol",
+  "crates/micyou-audio",
+  "crates/micyou-plugin",
+  "crates/micyou-plugin/fixtures/native",
+  "crates/micyou-transport",
+  "crates/micyou-core",
+  "crates/micyou-api",
+  "crates/micyou-rpc",
+  "crates/micyou-client",
+  "crates/micyou-daemon",
+  "crates/libmicyou",
+]
+
+[workspace.package]
+version = "0.1.0"
+authors = [
+  "LanRhyme (original MicYou)",
+  "OrientCOMPASS (libmicyou refactor)",
+]
+edition = "2021"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/OrientCOMPASS/libmicyou"
+rust-version = "1.87"
+
+# ---------------------------------------------------------------------------
+# Centralized dependency versions. Pins mirror the upstream MicYou desktop
+# workspace so ported modules resolve to the exact crates they were written
+# against; new layers (rpc/client/daemon) add their own entries below.
+# ---------------------------------------------------------------------------
+[workspace.dependencies]
+# Internal crates
+micyou-protocol = { path = "crates/micyou-protocol", version = "0.1.0" }
+micyou-audio = { path = "crates/micyou-audio", version = "0.1.0" }
+micyou-plugin = { path = "crates/micyou-plugin", version = "0.1.0" }
+micyou-transport = { path = "crates/micyou-transport", version = "0.1.0" }
+micyou-core = { path = "crates/micyou-core", version = "0.1.0" }
+micyou-api = { path = "crates/micyou-api", version = "0.1.0" }
+micyou-rpc = { path = "crates/micyou-rpc", version = "0.1.0" }
+micyou-client = { path = "crates/micyou-client", version = "0.1.0" }
+libmicyou = { path = "crates/libmicyou", version = "0.1.0" }
+
+# Serde / async core
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1.52.3", features = ["full"] }
+tokio-util = "0.7.18"
+tokio-stream = "0.1"
+futures-util = "0.3"
+bytes = "1.11.1"
+log = "0.4.32"
+semver = "1"
+thiserror = "2"
+
+# Protocol (protobuf)
+prost = "0.14.3"
+prost-build = "0.14.3"
+protoc-bin-vendored = "3.2.0"
+
+# Audio
+cpal = "0.15.3"
+rubato = "3.0.0"
+ringbuf = "0.3.3"
+nnnoiseless = "0.5.2"
+ort = { version = "=2.0.0-rc.13", default-features = false, features = [
+  "load-dynamic",
+  "tls-rustls",
+  "std",
+  "ndarray",
+  "api-17",
+] }
+rustfft = "6.4.1"
+ndarray = "0.17"
+opus-decoder = "0.1.1"
+
+# Network / discovery
+mdns-sd = "0.20.0"
+hostname = "0.4.2"
+local-ip-address = "0.6.13"
+socket2 = "0.6.4"
+axum = { version = "0.8", features = ["ws"] }
+rcgen = "0.13"
+rustls = "0.23"
+tokio-rustls = "0.26"
+rustls-pemfile = "2"
+tokio-tungstenite = { version = "0.28", features = [
+  "rustls-tls-webpki-roots",
+] }
+reqwest = { version = "0.13.4", default-features = false, features = [
+  "json",
+  "blocking",
+  "rustls",
+] }
+
+# Plugin runtime
+libloading = "0.8"
+wasmi = "1.1.0"
+zip = "2.2"
+
+# Host services (headless)
+global-hotkey = "0.8"
+notify-rust = "4"
+open = "5"
+arboard = "3.4"
+md-5 = "0.11.0"
+
+# Daemon
+clap = { version = "4", features = ["derive"] }
+
+# Platform-specific (referenced from crates under [target.'cfg(...)'.dependencies])
+wasapi = "0.16"
+winreg = "0.52"
+winapi = { version = "0.3", features = [
+  "winsock2",
+  "winuser",
+  "processthreadsapi",
+  "handleapi",
+  "winnt",
+] }
+libc = "0.2.169"
+
+# Upstream MicYou ships a patched pure-Rust Opus decoder.
+[patch.crates-io]
+opus-decoder = { git = "https://github.com/tfr0305/Rusopus.git", branch = "master" }
+
+[profile.release]
+lto = "thin"
+strip = true

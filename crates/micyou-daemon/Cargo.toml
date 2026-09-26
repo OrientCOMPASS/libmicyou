@@ -1,0 +1,21 @@
+[package]
+name = "micyou-daemon"
+description = "MicYou headless backend daemon: serves the JSON-RPC API over stdio and/or WebSocket"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "micyou-daemon"
+path = "src/main.rs"
+
+[dependencies]
+libmicyou.workspace = true
+micyou-core.workspace = true
+micyou-rpc.workspace = true
+clap.workspace = true
+tokio.workspace = true
+serde_json.workspace = true
+log.workspace = true

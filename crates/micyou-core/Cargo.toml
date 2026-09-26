@@ -1,0 +1,38 @@
+[package]
+name = "micyou-core"
+description = "MicYou backend core: server lifecycle orchestration, audio pipeline, shared configuration, platform virtual devices and headless plugin host"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+micyou-protocol.workspace = true
+micyou-audio = { workspace = true, features = ["dsp", "noise-suppression"] }
+micyou-plugin.workspace = true
+micyou-transport.workspace = true
+
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+log.workspace = true
+semver.workspace = true
+cpal.workspace = true
+zip.workspace = true
+reqwest.workspace = true
+md-5.workspace = true
+
+# Headless host services (no GUI toolkit required)
+global-hotkey.workspace = true
+notify-rust.workspace = true
+open.workspace = true
+arboard.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+winapi.workspace = true
+winreg.workspace = true

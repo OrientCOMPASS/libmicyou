@@ -1,0 +1,21 @@
+[package]
+name = "libmicyou"
+description = "libmicyou facade: embeddable Backend builder re-exporting the MicYou headless backend stack"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+micyou-protocol.workspace = true
+micyou-audio.workspace = true
+micyou-plugin.workspace = true
+micyou-transport.workspace = true
+micyou-core.workspace = true
+micyou-api.workspace = true
+micyou-rpc.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+log.workspace = true

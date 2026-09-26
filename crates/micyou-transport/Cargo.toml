@@ -1,0 +1,39 @@
+[package]
+name = "micyou-transport"
+description = "MicYou network transport: TCP control plane, UDP audio plane, web (TLS WebSocket) mode, mDNS discovery, ADB forwarding, jitter buffer with FEC and Opus decoding"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = ["web"]
+web = ["dep:axum", "dep:rcgen", "dep:rustls", "dep:tokio-rustls", "dep:rustls-pemfile"]
+
+[dependencies]
+micyou-protocol.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+bytes.workspace = true
+prost.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+log.workspace = true
+opus-decoder.workspace = true
+
+# Discovery / host networking
+mdns-sd.workspace = true
+hostname.workspace = true
+local-ip-address.workspace = true
+socket2.workspace = true
+
+# Web mode (optional)
+axum = { workspace = true, optional = true }
+rcgen = { workspace = true, optional = true }
+rustls = { workspace = true, optional = true }
+tokio-rustls = { workspace = true, optional = true }
+rustls-pemfile = { workspace = true, optional = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }

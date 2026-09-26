@@ -1,0 +1,20 @@
+[package]
+name = "micyou-rpc"
+description = "MicYou JSON-RPC 2.0 layer: method routing, sessions, event subscriptions and stdio/WebSocket transports"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+micyou-api.workspace = true
+micyou-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+tokio-stream.workspace = true
+futures-util.workspace = true
+log.workspace = true
+axum.workspace = true

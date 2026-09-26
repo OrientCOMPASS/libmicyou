@@ -1,0 +1,30 @@
+[package]
+name = "micyou-audio"
+description = "MicYou audio engine: cpal output, resampling, DSP chain (AEC/NS/dereverb/EQ/AGC/VAD), loopback capture and sound mixing"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = ["dsp"]
+dsp = ["dep:nnnoiseless", "dep:ort", "dep:rustfft", "dep:ndarray"]
+noise-suppression = ["dsp"]
+
+[dependencies]
+micyou-protocol.workspace = true
+serde.workspace = true
+log.workspace = true
+cpal.workspace = true
+rubato.workspace = true
+ringbuf.workspace = true
+
+# DSP dependencies (optional)
+nnnoiseless = { workspace = true, optional = true }
+ort = { workspace = true, optional = true }
+rustfft = { workspace = true, optional = true }
+ndarray = { workspace = true, optional = true }
+
+[target.'cfg(windows)'.dependencies]
+wasapi.workspace = true

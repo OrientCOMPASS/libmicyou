@@ -1,0 +1,17 @@
+[package]
+name = "micyou-protocol"
+description = "MicYou wire protocol: protobuf messages, magics and port constants shared with the mobile client"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+prost.workspace = true
+bytes.workspace = true
+serde.workspace = true
+
+[build-dependencies]
+prost-build.workspace = true
+protoc-bin-vendored.workspace = true

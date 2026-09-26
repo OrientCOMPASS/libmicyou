@@ -1,0 +1,16 @@
+[package]
+name = "micyou-api"
+description = "MicYou frontend-backend contract: RPC method parameters/results and the event catalogue as serde schemas"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+micyou-core.workspace = true
+micyou-transport.workspace = true
+micyou-audio.workspace = true
+micyou-plugin.workspace = true
+serde.workspace = true
+serde_json.workspace = true
