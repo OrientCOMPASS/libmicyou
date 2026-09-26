@@ -13,7 +13,7 @@
 use micyou_api::events::ServerEvent;
 use micyou_slint_frontend::controller::Session;
 use serde_json::{json, Value};
-use slint::{ComponentHandle as _, ModelRc, SharedString, VecModel, Weak};
+use slint::{ComponentHandle as _, Model as _, ModelRc, SharedString, VecModel, Weak};
 
 slint::include_modules!();
 
@@ -226,12 +226,10 @@ impl Ctl {
         };
         let aec_supported = self.cache.os != "macos";
 
-        let combo_model: ModelRc<SharedString> = ModelRc::new(VecModel::from(
-            combo.iter().map(|s| ss(s)).collect::<Vec<_>>(),
-        ));
-        let gains_model: ModelRc<f32> = ModelRc::new(VecModel::from(gains));
-
         upd(&self.ui, move |u| {
+            let combo_model: ModelRc<SharedString> =
+                ModelRc::new(VecModel::from(combo.iter().map(ss).collect::<Vec<_>>()));
+            let gains_model: ModelRc<f32> = ModelRc::new(VecModel::from(gains));
             u.set_dsp_gain(jf32(&settings, "gain", 0.0));
             u.set_dsp_ns(jbool(&settings, "nsEnabled"));
             u.set_dsp_ns_type(ns_type_index);
