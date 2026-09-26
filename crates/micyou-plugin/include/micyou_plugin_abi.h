@@ -145,6 +145,28 @@ typedef struct mpl_host_api {
     mpl_result_t (*get_dsp_settings)(void *ctx, char *out, uint32_t *out_size);
     /* Update DSP settings from JSON string (requires control.intercept). */
     mpl_result_t (*set_dsp_settings)(void *ctx, const char *settings_json);
+
+    /* ── Host API v3 (append-only; check mpl_host_info_t.api_version >= 3) ── */
+
+    /* Call any backend RPC method in-process (requires host.call; admin
+     * methods require host.admin). `method` is a contract method name such
+     * as "server/status"; `params_json` is a by-name JSON object (NULL = {}).
+     * `out` receives the JSON envelope:
+     *   {"ok":true,"result":<value>}
+     *   {"ok":false,"error":{"code":<int>,"message":"...","data":...}}
+     * Blocking; NOT real-time safe (never call from process_audio). */
+    mpl_result_t (*call_host)(void *ctx, const char *method,
+                              const char *params_json,
+                              char *out, uint32_t *out_size);
+
+    /* Subscribe to backend events (requires host.events). Matching events
+     * arrive via on_message with topic "host:event" and the serialized
+     * ServerEvent JSON as payload. `filter` is "*" or a tag prefix such as
+     * "audio" (audioLevel/audioMetrics/audioSpectrum) or "device". */
+    mpl_result_t (*subscribe_host_events)(void *ctx, const char *filter);
+
+    /* Remove a subscription previously added by subscribe_host_events. */
+    mpl_result_t (*unsubscribe_host_events)(void *ctx, const char *filter);
 } mpl_host_api_t;
 
 /* Static plugin identity. The id/version must match the manifest. */

@@ -24,8 +24,7 @@ pub struct AdbDevice {
     pub description: String,
 }
 
-#[derive(serde::Serialize)]
-#[serde(tag = "type")]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub enum UsbModeResult {
     Success,
     NoDevices,

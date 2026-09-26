@@ -106,6 +106,8 @@ pub struct ServerCore {
     pub transport_config: Arc<TransportConfig>,
     /// Bridge translating transport notifications to bus + plugin events.
     bridge: Arc<CoreTransportBridge>,
+    /// One-shot flag for the plugin event pump task.
+    plugin_pump_started: AtomicBool,
     /// Web-mode server instance.
     #[cfg(feature = "web")]
     pub web_server: Arc<Mutex<Option<micyou_transport::web::WebServer>>>,
@@ -171,11 +173,51 @@ impl ServerCore {
             bus,
             transport_config,
             bridge,
+            plugin_pump_started: AtomicBool::new(false),
             #[cfg(feature = "web")]
             web_server,
         };
         core.wire_control_handlers();
         core
+    }
+
+    /// Start the pump delivering subscribed backend events to plugins as
+    /// `host:event` bus messages. Idempotent; requires a tokio runtime
+    /// (called from `start()` and from the RPC layer when available).
+    pub fn ensure_plugin_event_pump(&self) {
+        if tokio::runtime::Handle::try_current().is_err() {
+            return; // no runtime yet; start() will retry
+        }
+        if self.plugin_pump_started.swap(true, Ordering::Relaxed) {
+            return;
+        }
+        let mut rx = self.bus.subscribe();
+        let plugins = self.plugins.clone();
+        tokio::spawn(async move {
+            loop {
+                match rx.recv().await {
+                    Ok(event) => {
+                        if plugins.event_subs.is_empty() {
+                            continue;
+                        }
+                        let tag = event.tag();
+                        let Ok(json) = serde_json::to_vec(&*event) else {
+                            continue;
+                        };
+                        for (plugin_id, filters) in plugins.event_subs.snapshot() {
+                            if filters
+                                .iter()
+                                .any(|f| crate::plugins::event_filter_matches(f, tag))
+                            {
+                                plugins.deliver_event(&plugin_id, &json);
+                            }
+                        }
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                }
+            }
+        });
     }
 
     /// Install the plugin control-plane handlers (mute/monitoring/DSP).
@@ -430,6 +472,7 @@ impl ServerCore {
 
         let _lifecycle_guard = self.lifecycle_gate.enter().await;
         self.lifecycle.lock().await.begin_start().await?;
+        self.ensure_plugin_event_pump();
 
         let cancel_token = {
             let mut token_lock = self.cancel_token.lock().await;

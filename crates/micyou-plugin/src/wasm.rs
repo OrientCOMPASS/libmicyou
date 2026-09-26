@@ -1094,6 +1094,88 @@ fn register_host_functions(linker: &mut Linker<WasmHostCtx>) {
             },
         )
         .unwrap();
+
+    // ── Host API v3: generic backend bridge ───────────────────────────────
+
+    // call_host(method_ptr, params_ptr) -> ptr to JSON envelope string
+    // (host-allocated; `{"ok":..,"result":..}` / `{"ok":false,"error":..}`)
+    linker
+        .func_wrap(
+            WASM_IMPORT_MODULE,
+            "call_host",
+            |mut caller: wasmi::Caller<'_, WasmHostCtx>,
+             method_ptr: i32,
+             params_ptr: i32|
+             -> Result<i32, wasmi::Error> {
+                let allowed = caller.data().capabilities.iter().any(|c| {
+                    c == crate::manifest::capabilities::HOST_CALL
+                        || c == crate::manifest::capabilities::HOST_ADMIN
+                });
+                if !allowed {
+                    return Err(wasmi::Error::new(
+                        "permission denied: call_host requires host.call or host.admin",
+                    ));
+                }
+                let memory = export_memory(&caller)?;
+                let method = read_str_from_memory(&mut caller, &memory, method_ptr)?;
+                let params = read_str_from_memory(&mut caller, &memory, params_ptr)?;
+                let envelope = caller
+                    .data()
+                    .host
+                    .call_host(&method, &params)
+                    .map_err(|e| wasmi::Error::new(e.to_string()))?;
+                write_str_to_memory(&mut caller, &memory, &envelope)
+            },
+        )
+        .unwrap();
+
+    // subscribe_host_events(filter_ptr) -> result code
+    linker
+        .func_wrap(
+            WASM_IMPORT_MODULE,
+            "subscribe_host_events",
+            |mut caller: wasmi::Caller<'_, WasmHostCtx>,
+             filter_ptr: i32|
+             -> Result<i32, wasmi::Error> {
+                caller
+                    .data()
+                    .require(crate::manifest::capabilities::HOST_EVENTS)
+                    .map_err(|e| wasmi::Error::new(e.to_string()))?;
+                let memory = export_memory(&caller)?;
+                let filter = read_str_from_memory(&mut caller, &memory, filter_ptr)?;
+                caller
+                    .data()
+                    .host
+                    .subscribe_host_events(&filter)
+                    .map(|_| mpl_result_t::MPL_OK as i32)
+                    .map_err(|e| wasmi::Error::new(e.to_string()))
+            },
+        )
+        .unwrap();
+
+    // unsubscribe_host_events(filter_ptr) -> result code
+    linker
+        .func_wrap(
+            WASM_IMPORT_MODULE,
+            "unsubscribe_host_events",
+            |mut caller: wasmi::Caller<'_, WasmHostCtx>,
+             filter_ptr: i32|
+             -> Result<i32, wasmi::Error> {
+                caller
+                    .data()
+                    .require(crate::manifest::capabilities::HOST_EVENTS)
+                    .map_err(|e| wasmi::Error::new(e.to_string()))?;
+                let memory = export_memory(&caller)?;
+                let filter = read_str_from_memory(&mut caller, &memory, filter_ptr)?;
+                caller
+                    .data()
+                    .host
+                    .unsubscribe_host_events(&filter)
+                    .map(|_| mpl_result_t::MPL_OK as i32)
+                    .map_err(|e| wasmi::Error::new(e.to_string()))
+            },
+        )
+        .unwrap();
 }
 
 fn export_memory(caller: &wasmi::Caller<'_, WasmHostCtx>) -> Result<Memory, wasmi::Error> {

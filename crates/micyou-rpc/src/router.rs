@@ -32,14 +32,34 @@ pub struct RpcService {
 }
 
 impl RpcService {
-    /// Create the service and attach the session-aware UI bridge to the
-    /// plugin host (so plugin `open_window` calls reach frontends).
+    /// Create the service and wire the plugin-facing bridges:
+    /// - the UI bridge (plugin `open_window` → `uiRequest` events), and
+    /// - the host-RPC bridge (plugin `call_host` → `dispatch`, capability-gated).
     pub fn new(backend: Arc<Backend>) -> Arc<Self> {
         let sessions = SessionRegistry::new();
         backend.core.plugins.ui.set(Some(Arc::new(RpcUiBridge {
             sessions: sessions.clone(),
         })));
-        Arc::new(Self { backend, sessions })
+        let service = Arc::new(Self { backend, sessions });
+        service.install_host_bridge();
+        service
+    }
+
+    /// Install the plugin `call_host` bridge (synthetic admin-less session;
+    /// access is decided per call by capabilities + method classification).
+    fn install_host_bridge(self: &Arc<Self>) {
+        let (out_tx, _out_rx) = tokio::sync::mpsc::unbounded_channel();
+        let session = self.sessions.create(out_tx);
+        let bridge = Arc::new(crate::host_bridge::RpcHostBridge::new(
+            self.clone(),
+            session,
+        ));
+        if let Ok(mut slot) = self.backend.core.plugins.host_rpc.write() {
+            *slot = Some(bridge);
+        }
+        // Plugin event subscriptions are served by the core pump; make sure
+        // it runs whenever a runtime is available.
+        self.backend.core.ensure_plugin_event_pump();
     }
 
     /// Spawn the event pump: forwards [`micyou_core::EventBus`] events to

@@ -564,6 +564,75 @@ pub struct LocaleResult {
     pub language: String,
 }
 
+// ── plugin bridge access classification ───────────────────────────────────
+
+/// Capability granting access to the read/control method surface via the
+/// plugin `call_host` bridge.
+pub const CAP_HOST_CALL: &str = "host.call";
+/// Capability granting access to administrative methods (implies call reach).
+pub const CAP_HOST_ADMIN: &str = "host.admin";
+/// Capability granting backend event subscriptions.
+pub const CAP_HOST_EVENTS: &str = "host.events";
+
+/// What a plugin holding [`CAP_HOST_CALL`] / [`CAP_HOST_ADMIN`] may reach.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MethodAccess {
+    /// Not callable through the plugin bridge at all.
+    Denied,
+    /// Callable with `host.call` (or `host.admin`).
+    Call,
+    /// Callable only with `host.admin`.
+    Admin,
+}
+
+/// Classify a contract method for the plugin `call_host` bridge.
+///
+/// Read-only and control-plane methods are `Call`; anything that mutates
+/// persisted configuration, installs/removes software, or changes the server
+/// lifecycle is `Admin`; session management is `Denied` (plugins are not
+/// RPC sessions — they already receive events via `host.events`).
+pub fn method_access(method: &str) -> MethodAccess {
+    use MethodAccess::*;
+    match method {
+        // Session management is meaningless for plugins.
+        SESSION_HELLO | SESSION_SUBSCRIBE | SESSION_UNSUBSCRIBE => Denied,
+
+        // Lifecycle + persisted config + installs = admin surface.
+        SERVER_START | SERVER_STOP | SERVER_PREFS_SAVE => Admin,
+        AUDIO_SETTINGS_UPDATE => Admin,
+        NETWORK_FIREWALL_ALLOW => Admin,
+        USB_ENABLE => Admin,
+        VBCABLE_INSTALL => Admin,
+        BLACKHOLE_SET_INPUT | BLACKHOLE_RESTORE => Admin,
+        CONFIG_UI_SAVE | CONFIG_THEME_SAVE => Admin,
+        PLUGINS_SET_ENABLED | PLUGINS_UNINSTALL | PLUGINS_CONFIG_SET => Admin,
+        PLUGINS_PREVIEW_ZIP | PLUGINS_PREVIEW_URL => Admin,
+        PLUGINS_INSTALL_URL | PLUGINS_INSTALL_CANCEL | PLUGINS_IMPORT => Admin,
+        PLUGINS_UPDATE_CHECK | PLUGINS_UPDATE_APPLY => Admin,
+        MODE_RELEASE_LOCK => Admin,
+        SYSTEM_LOG_EXPORT => Admin,
+
+        // Everything else in the catalogue: read + control with host.call.
+        SERVER_STATUS | SERVER_PREFS_GET | SERVER_PREFS_EXISTS => Call,
+        AUDIO_DEVICES | AUDIO_SETTINGS_GET => Call,
+        AUDIO_MUTE_SET | AUDIO_MUTE_GET | AUDIO_MONITORING_SET | AUDIO_SPECTRUM_SET => Call,
+        NETWORK_INFO | NETWORK_INTERFACES => Call,
+        USB_DEVICES => Call,
+        VBCABLE_CHECK | BLACKHOLE_CHECK | PIPEWIRE_CHECK => Call,
+        WEB_STATUS => Call,
+        CONFIG_UI_GET | CONFIG_THEME_GET => Call,
+        PLUGINS_LIST | PLUGINS_CONFIG_GET | PLUGINS_LOGS | PLUGINS_SYNC_STATUS => Call,
+        PLUGINS_DIR | PLUGINS_TRIGGER | PLUGINS_PANEL | PLUGINS_PANEL_ICONS => Call,
+        PLUGINS_WINDOW_OPEN => Call,
+        MODE_STATUS => Call,
+        SYSTEM_VERSION | SYSTEM_LOG_PATH | SYSTEM_LOG_CONTENT => Call,
+        SYSTEM_UPDATE_CHECK | SYSTEM_SPONSORS | SYSTEM_LOCALE => Call,
+
+        // Unknown methods: let the router answer method-not-found.
+        _ => Call,
+    }
+}
+
 /// Generic acknowledgement result for methods without a payload.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -618,6 +687,15 @@ mod tests {
         let params: StartServerParams = serde_json::from_str("{}").unwrap();
         assert!(params.port.is_none());
         assert!(params.mode.is_none());
+    }
+
+    #[test]
+    fn access_classification_gates_admin_surface() {
+        assert_eq!(method_access(SERVER_STATUS), MethodAccess::Call);
+        assert_eq!(method_access(AUDIO_MUTE_SET), MethodAccess::Call);
+        assert_eq!(method_access(SERVER_START), MethodAccess::Admin);
+        assert_eq!(method_access(PLUGINS_INSTALL_URL), MethodAccess::Admin);
+        assert_eq!(method_access(SESSION_HELLO), MethodAccess::Denied);
     }
 
     #[test]

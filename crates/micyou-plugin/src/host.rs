@@ -250,6 +250,41 @@ pub trait HostApi: Send + Sync {
             "set_dsp_settings not supported".into(),
         ))
     }
+
+    // ── Host API v3: the generic backend bridge ("plugin liberation") ─────
+
+    /// Call any backend RPC method in-process (requires `host.call`;
+    /// administrative methods additionally require `host.admin`).
+    ///
+    /// `method` is a contract method name (e.g. `"server/status"`,
+    /// `"audio/mute/set"` — see `micyou_api::methods`), `params_json` the
+    /// by-name params object (`"{}"` for none). Returns a JSON envelope:
+    /// `{"ok":true,"result":<value>}` or
+    /// `{"ok":false,"error":{"code":<i64>,"message":"...","data":...}}`.
+    ///
+    /// Blocking and NOT real-time safe: never call from `process_audio`.
+    /// The host may take up to several seconds; a timeout yields
+    /// `Err(PluginError::Runtime)`.
+    fn call_host(&self, _method: &str, _params_json: &str) -> PluginResult<String> {
+        Err(PluginError::Runtime("call_host not supported".into()))
+    }
+
+    /// Subscribe to backend events (requires `host.events`). Matching events
+    /// arrive as messages on topic `host:event` with the serialized
+    /// `ServerEvent` JSON as payload. `filter` is `"*"` or a tag prefix
+    /// (e.g. `"audio"`, `"device"`).
+    fn subscribe_host_events(&self, _filter: &str) -> PluginResult<()> {
+        Err(PluginError::Runtime(
+            "subscribe_host_events not supported".into(),
+        ))
+    }
+
+    /// Remove an event subscription added by [`HostApi::subscribe_host_events`].
+    fn unsubscribe_host_events(&self, _filter: &str) -> PluginResult<()> {
+        Err(PluginError::Runtime(
+            "unsubscribe_host_events not supported".into(),
+        ))
+    }
 }
 
 #[cfg(test)]

@@ -196,6 +196,24 @@ pub struct mpl_host_api_t {
     ) -> mpl_result_t,
     pub set_dsp_settings:
         unsafe extern "C" fn(ctx: *mut c_void, settings_json: *const c_char) -> mpl_result_t,
+    /// Appended in host API v3 (append-only keeps older plugins working).
+    /// Generic capability-gated backend RPC bridge. `params_json` may be
+    /// NULL (treated as `{}`); `out` receives the JSON envelope
+    /// `{"ok":bool,"result":...}` / `{"ok":false,"error":{...}}`.
+    /// Plugins MUST check `mpl_host_info_t.api_version >= 3` before calling.
+    pub call_host: unsafe extern "C" fn(
+        ctx: *mut c_void,
+        method: *const c_char,
+        params_json: *const c_char,
+        out: *mut c_char,
+        out_size: *mut u32,
+    ) -> mpl_result_t,
+    /// Subscribe to backend events (topic `host:event`). API v3+.
+    pub subscribe_host_events:
+        unsafe extern "C" fn(ctx: *mut c_void, filter: *const c_char) -> mpl_result_t,
+    /// Unsubscribe from backend events. API v3+.
+    pub unsubscribe_host_events:
+        unsafe extern "C" fn(ctx: *mut c_void, filter: *const c_char) -> mpl_result_t,
 }
 
 // The table travels inside `NativePlugin` which is `Send`; the raw `ctx`
@@ -787,6 +805,82 @@ unsafe extern "C" fn shim_set_dsp_settings(
     }
 }
 
+unsafe extern "C" fn shim_call_host(
+    ctx: *mut c_void,
+    method: *const c_char,
+    params_json: *const c_char,
+    out: *mut c_char,
+    out_size: *mut u32,
+) -> mpl_result_t {
+    unsafe {
+        let ctx = &*(ctx as *const NativeHostCtx);
+        if !has_capability(ctx, crate::manifest::capabilities::HOST_CALL)
+            && !has_capability(ctx, crate::manifest::capabilities::HOST_ADMIN)
+        {
+            return mpl_result_t::MPL_ERR_PERMISSION;
+        }
+        if method.is_null() {
+            return mpl_result_t::MPL_ERR_INVALID_ARG;
+        }
+        let (Some(out), Some(out_size)) = (out.as_mut(), out_size.as_mut()) else {
+            return mpl_result_t::MPL_ERR_INVALID_ARG;
+        };
+        let method = CStr::from_ptr(method).to_string_lossy();
+        let params = if params_json.is_null() {
+            std::borrow::Cow::Borrowed("{}")
+        } else {
+            CStr::from_ptr(params_json).to_string_lossy()
+        };
+        match ctx.host.call_host(&method, &params) {
+            Ok(envelope) => write_json_to_buf(&envelope, out, out_size),
+            Err(PluginError::PermissionDenied(_)) => mpl_result_t::MPL_ERR_PERMISSION,
+            Err(_) => mpl_result_t::MPL_ERR_RUNTIME,
+        }
+    }
+}
+
+unsafe extern "C" fn shim_subscribe_host_events(
+    ctx: *mut c_void,
+    filter: *const c_char,
+) -> mpl_result_t {
+    unsafe {
+        let ctx = &*(ctx as *const NativeHostCtx);
+        if !has_capability(ctx, crate::manifest::capabilities::HOST_EVENTS) {
+            return mpl_result_t::MPL_ERR_PERMISSION;
+        }
+        if filter.is_null() {
+            return mpl_result_t::MPL_ERR_INVALID_ARG;
+        }
+        let filter = CStr::from_ptr(filter).to_string_lossy();
+        match ctx.host.subscribe_host_events(&filter) {
+            Ok(()) => mpl_result_t::MPL_OK,
+            Err(PluginError::PermissionDenied(_)) => mpl_result_t::MPL_ERR_PERMISSION,
+            Err(_) => mpl_result_t::MPL_ERR_RUNTIME,
+        }
+    }
+}
+
+unsafe extern "C" fn shim_unsubscribe_host_events(
+    ctx: *mut c_void,
+    filter: *const c_char,
+) -> mpl_result_t {
+    unsafe {
+        let ctx = &*(ctx as *const NativeHostCtx);
+        if !has_capability(ctx, crate::manifest::capabilities::HOST_EVENTS) {
+            return mpl_result_t::MPL_ERR_PERMISSION;
+        }
+        if filter.is_null() {
+            return mpl_result_t::MPL_ERR_INVALID_ARG;
+        }
+        let filter = CStr::from_ptr(filter).to_string_lossy();
+        match ctx.host.unsubscribe_host_events(&filter) {
+            Ok(()) => mpl_result_t::MPL_OK,
+            Err(PluginError::PermissionDenied(_)) => mpl_result_t::MPL_ERR_PERMISSION,
+            Err(_) => mpl_result_t::MPL_ERR_RUNTIME,
+        }
+    }
+}
+
 unsafe extern "C" fn shim_clipboard_write(ctx: *mut c_void, text: *const c_char) -> mpl_result_t {
     unsafe {
         let ctx = &*(ctx as *const NativeHostCtx);
@@ -893,6 +987,9 @@ pub fn host_table_for(ctx: Arc<NativeHostCtx>) -> mpl_host_api_t {
         get_monitoring: shim_get_monitoring,
         get_dsp_settings: shim_get_dsp_settings,
         set_dsp_settings: shim_set_dsp_settings,
+        call_host: shim_call_host,
+        subscribe_host_events: shim_subscribe_host_events,
+        unsubscribe_host_events: shim_unsubscribe_host_events,
     }
 }
 

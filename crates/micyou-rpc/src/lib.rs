@@ -16,6 +16,7 @@
 //!   (a Tauri backend, CLI or TUI can drive the daemon without sockets).
 //! - [`ui`] — UI-request delegation to attached graphical frontends.
 
+pub mod host_bridge;
 pub mod local;
 pub mod router;
 pub mod session;

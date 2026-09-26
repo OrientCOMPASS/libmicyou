@@ -30,7 +30,7 @@ pub const MIN_SUPPORTED_API_VERSION: u32 = 1;
 
 /// Host API version this plugin system speaks. Plugins declare the version
 /// they were built against; the host rejects incompatible ones.
-pub const HOST_API_VERSION: u32 = 2;
+pub const HOST_API_VERSION: u32 = 3;
 
 /// Plugin directory layout: the manifest file name.
 pub const MANIFEST_FILE_NAME: &str = "plugin.json";
@@ -127,6 +127,14 @@ pub mod capabilities {
     pub const CONTROL_OBSERVE: &str = "control.observe";
     /// Intercept or mutate host control plane signals.
     pub const CONTROL_INTERCEPT: &str = "control.intercept";
+    /// Call backend RPC methods in-process (read + control surface).
+    pub const HOST_CALL: &str = "host.call";
+    /// Call administrative backend RPC methods (server start/stop, plugin
+    /// management, device installers, config writes). Implies `host.call`
+    /// reach: hosts treat `host.admin` as covering `host.call`.
+    pub const HOST_ADMIN: &str = "host.admin";
+    /// Subscribe to the backend event stream (`host:event` messages).
+    pub const HOST_EVENTS: &str = "host.events";
 }
 
 /// All capability identifiers the host currently recognizes.
@@ -147,6 +155,9 @@ pub const KNOWN_CAPABILITIES: &[&str] = &[
     capabilities::CLIPBOARD_WRITE,
     capabilities::CONTROL_OBSERVE,
     capabilities::CONTROL_INTERCEPT,
+    capabilities::HOST_CALL,
+    capabilities::HOST_ADMIN,
+    capabilities::HOST_EVENTS,
 ];
 
 /// Native platform tags used in `PluginManifest.platforms`.

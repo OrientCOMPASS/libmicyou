@@ -192,6 +192,101 @@ impl PluginSyncTransport for PluginSyncAdapter {
     }
 }
 
+/// In-process bridge to the RPC method catalogue, installed by the RPC layer
+/// (or any embedded host). Powers the plugin `call_host` HostApi method:
+/// plugins reach the same service surface as remote frontends, gated by the
+/// `host.call` / `host.admin` capabilities and the contract's method access
+/// classification (`micyou_api::methods::method_access`).
+pub trait HostRpc: Send + Sync + 'static {
+    /// Dispatch one contract method. `capabilities` is the calling plugin's
+    /// manifest capability list; the bridge enforces access classification.
+    /// Returns the JSON envelope (`{"ok":true,"result":..}` /
+    /// `{"ok":false,"error":{..}}`) on success, or `Err` for permission /
+    /// infrastructure failures.
+    fn call(
+        &self,
+        capabilities: &[String],
+        method: &str,
+        params_json: &str,
+    ) -> PluginResult<String>;
+}
+
+/// Per-plugin backend-event subscriptions (see `HostApi::subscribe_host_events`).
+/// The core event pump matches every published `ServerEvent` against these
+/// filters and delivers `host:event` bus messages.
+#[derive(Default)]
+pub struct PluginEventSubs {
+    filters: Mutex<HashMap<String, Vec<String>>>,
+}
+
+impl PluginEventSubs {
+    pub fn new() -> Arc<Self> {
+        Arc::new(Self::default())
+    }
+
+    /// Add a filter for a plugin (deduplicated).
+    pub fn add(&self, plugin_id: &str, filter: &str) {
+        if let Ok(mut map) = self.filters.lock() {
+            let entry = map.entry(plugin_id.to_string()).or_default();
+            let filter = filter.to_string();
+            if !entry.iter().any(|f| *f == filter) {
+                entry.push(filter);
+            }
+        }
+    }
+
+    /// Remove one filter; drops the plugin entry when it becomes empty.
+    pub fn remove(&self, plugin_id: &str, filter: &str) {
+        if let Ok(mut map) = self.filters.lock() {
+            if let Some(entry) = map.get_mut(plugin_id) {
+                entry.retain(|f| f != filter);
+                if entry.is_empty() {
+                    map.remove(plugin_id);
+                }
+            }
+        }
+    }
+
+    /// Drop all filters of a plugin (disable/uninstall).
+    pub fn clear_plugin(&self, plugin_id: &str) {
+        if let Ok(mut map) = self.filters.lock() {
+            map.remove(plugin_id);
+        }
+    }
+
+    /// Snapshot for the pump: (plugin_id, filters).
+    pub fn snapshot(&self) -> Vec<(String, Vec<String>)> {
+        self.filters
+            .lock()
+            .map(|map| {
+                map.iter()
+                    .map(|(id, filters)| (id.clone(), filters.clone()))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// Fast path for the pump when nobody subscribed.
+    pub fn is_empty(&self) -> bool {
+        self.filters
+            .lock()
+            .map(|map| map.is_empty())
+            .unwrap_or(true)
+    }
+}
+
+/// Filter semantics shared with the RPC session subscriptions: `"*"` matches
+/// everything; otherwise the event tag must start with the filter (trailing
+/// `*` accepted and ignored).
+pub fn event_filter_matches(filter: &str, tag: &str) -> bool {
+    let filter = filter.trim();
+    if filter == "*" {
+        return true;
+    }
+    let prefix = filter.trim_end_matches('*');
+    !prefix.is_empty() && tag.starts_with(prefix)
+}
+
 #[derive(Clone, Default)]
 pub struct ControlPlaneHandlers {
     pub get_muted: Option<Arc<dyn Fn() -> micyou_plugin::PluginResult<bool> + Send + Sync>>,
@@ -219,6 +314,10 @@ pub struct PluginHost {
         >,
     >,
     pub control_handlers: Arc<Mutex<ControlPlaneHandlers>>,
+    /// Plugin `call_host` bridge slot (installed by the RPC layer).
+    pub host_rpc: Arc<RwLock<Option<Arc<dyn HostRpc>>>>,
+    /// Plugin backend-event subscriptions.
+    pub event_subs: Arc<PluginEventSubs>,
     pub network_stats: Arc<micyou_transport::stats::NetworkStats>,
     pub audio_output: Arc<crate::audio_output::AudioOutputHandle>,
     pub active_connection: micyou_transport::tcp::SharedActiveConnection,
@@ -599,6 +698,8 @@ impl PluginHost {
             ui,
             panel_icons: Arc::new(std::sync::Mutex::new(std::collections::HashMap::new())),
             control_handlers: Arc::new(Mutex::new(ControlPlaneHandlers::default())),
+            host_rpc: Arc::new(RwLock::new(None)),
+            event_subs: PluginEventSubs::new(),
             network_stats,
             audio_output: output,
             active_connection,
@@ -710,6 +811,8 @@ impl PluginHost {
             self.ui.clone(),
             self.panel_icons.clone(),
             self.control_handlers.clone(),
+            self.host_rpc.clone(),
+            self.event_subs.clone(),
             self.network_stats.clone(),
             self.audio_output.clone(),
             self.active_connection.clone(),
@@ -756,12 +859,20 @@ impl PluginHost {
     }
 
     pub fn disable_plugin(&self, id: &str) -> PluginResult<()> {
+        self.event_subs.clear_plugin(id);
         self.dsp_registry.unregister(id)?;
         let mut manager = self.manager.lock().map_err(lock_err)?;
         manager.unregister_instance(id)?;
         manager.set_enabled(id, false)?;
         log::info!("[plugins] disabled {id}");
         Ok(())
+    }
+
+    /// Deliver a serialized backend event to one plugin as a `host:event`
+    /// bus message (used by the core event pump).
+    pub fn deliver_event(&self, plugin_id: &str, event_json: &[u8]) {
+        let msg = PluginMessage::new("host", plugin_id, "host:event", event_json.to_vec());
+        self.bus.handle_incoming(&msg);
     }
 
     pub fn broadcast_event(&self, event: &micyou_plugin::PluginEvent) {
@@ -783,6 +894,7 @@ impl PluginHost {
     }
 
     pub fn uninstall_plugin(&self, id: &str) -> PluginResult<()> {
+        self.event_subs.clear_plugin(id);
         self.dsp_registry.unregister(id)?;
         let mut manager = self.manager.lock().map_err(lock_err)?;
         manager.uninstall(id)?;
@@ -897,6 +1009,8 @@ pub struct PluginHostApi {
         >,
     >,
     control_handlers: Arc<Mutex<ControlPlaneHandlers>>,
+    host_rpc: Arc<RwLock<Option<Arc<dyn HostRpc>>>>,
+    event_subs: Arc<PluginEventSubs>,
     timer_next: std::sync::atomic::AtomicU64,
     timers: std::sync::Mutex<
         std::collections::HashMap<u64, std::sync::Arc<std::sync::atomic::AtomicBool>>,
@@ -925,6 +1039,8 @@ impl PluginHostApi {
             >,
         >,
         control_handlers: Arc<Mutex<ControlPlaneHandlers>>,
+        host_rpc: Arc<RwLock<Option<Arc<dyn HostRpc>>>>,
+        event_subs: Arc<PluginEventSubs>,
         network_stats: Arc<micyou_transport::stats::NetworkStats>,
         audio_output: Arc<crate::audio_output::AudioOutputHandle>,
         active_connection: micyou_transport::tcp::SharedActiveConnection,
@@ -945,6 +1061,8 @@ impl PluginHostApi {
             ui,
             panel_icons,
             control_handlers,
+            host_rpc,
+            event_subs,
             plugin_id,
             dir,
             timer_next: std::sync::atomic::AtomicU64::new(1),
@@ -958,6 +1076,18 @@ impl PluginHostApi {
             #[cfg(feature = "web")]
             web_server,
         })
+    }
+}
+
+impl PluginHostApi {
+    /// The plugin's declared capabilities (empty when the entry vanished).
+    fn capabilities_snapshot(&self) -> Vec<String> {
+        self.manager
+            .lock()
+            .ok()
+            .and_then(|manager| manager.entry(&self.plugin_id).ok().flatten())
+            .map(|entry| entry.manifest.capabilities.clone())
+            .unwrap_or_default()
     }
 }
 
