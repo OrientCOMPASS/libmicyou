@@ -21,6 +21,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use micyou_api::methods::*;
 use micyou_plugin::manifest::PluginManifest;
+use micyou_plugin::PluginSyncTransport;
 
 use crate::events::ServerEvent;
 use crate::service::Backend;
