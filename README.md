@@ -31,6 +31,15 @@ MicYou 桌面端后端的独立重构：前后端分离、与 Tauri 解耦的无
 | [`micyou-daemon`](crates/micyou-daemon) | 无头守护进程二进制 |
 | [`libmicyou`](crates/libmicyou) | 门面 crate：`Backend` 构建器，可嵌入任意 Rust 宿主 |
 
+## 下载测试构建
+
+手动触发的 [`Release Builds`](../../actions/workflows/release-builds.yml) 工作流会把
+**Slint 前端 / Tauri 前端 / micyou-daemon** 三平台（linux-x64 / windows-x64 /
+macos-arm64）打包发布到滚动预发布版本
+**[dev-builds](../../releases/tag/dev-builds)**（每次 dispatch 覆盖更新，
+zip 内附 RUN-README.txt 运行说明），同时保留为 run 的 workflow artifacts。
+打 `v*` tag 则发布到对应 tag 的 Release。
+
 ## 参考前端（frontends/，独立 workspace，CI 三平台构建+无头 e2e 测试）
 
 | 前端 | 传输 | 形态 |

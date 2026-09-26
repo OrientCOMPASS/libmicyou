@@ -1,0 +1,186 @@
+name: Release Builds
+
+# Produces downloadable test builds of the reference frontends + daemon.
+# Triggers:
+#   - workflow_dispatch: publishes/updates the rolling "dev-builds" pre-release
+#   - tag push (v*):     publishes a release under the tag
+#
+# Artifacts per platform (zip):
+#   micyou-slint-frontend   — self-contained Slint GUI (backend embedded)
+#   micyou-tauri-frontend   — Tauri 2 GUI (spawns the sibling daemon)
+#   micyou-daemon           — headless backend (stdio sidecar / --ws server)
+#   RUN-README.txt          — platform-specific run instructions
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            platform: linux-x64
+          - os: windows-2022
+            platform: windows-x64
+          - os: macos-14
+            platform: macos-arm64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # Incremental compilation cache across the three workspaces (debug CI
+      # caches and release caches coexist under separate keys; restore-keys
+      # make repeated release runs incremental).
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            frontends/slint -> target
+            frontends/tauri -> target
+          cache-on-failure: true
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config \
+            libasound2-dev \
+            libx11-dev \
+            libxkbcommon-dev \
+            libwayland-dev \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev
+
+      - name: Build daemon (release)
+        run: cargo build --release -p micyou-daemon
+
+      - name: Build Slint frontend (release)
+        run: cargo build --release
+        working-directory: frontends/slint
+
+      - name: Build Tauri frontend (release)
+        run: cargo build --release
+        working-directory: frontends/tauri
+
+      - name: Package (unix)
+        if: runner.os != 'Windows'
+        run: |
+          set -eu
+          STAGE=stage/micyou
+          mkdir -p "$STAGE"
+          cp target/release/micyou-daemon "$STAGE"/
+          cp frontends/slint/target/release/micyou-slint-frontend "$STAGE"/
+          cp frontends/tauri/target/release/micyou-tauri-frontend "$STAGE"/
+          git rev-parse --short HEAD > "$STAGE"/VERSION.txt
+          date -u >> "$STAGE"/VERSION.txt
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            cat > "$STAGE"/RUN-README.txt <<'NOTES'
+          MicYou libmicyou 测试构建 — Linux x64 (glibc >= 2.35: Ubuntu 22.04+/Debian 12+/Fedora 36+)
+
+          运行:
+            ./micyou-slint-frontend          # Slint GUI,后端内嵌,单文件即跑
+            ./micyou-daemon --stdio          # 无头后端(供 sidecar/管道)
+            ./micyou-daemon --ws 127.0.0.1:9610 --autostart   # WebSocket 服务
+            ./micyou-tauri-frontend          # Tauri GUI,自动拉起同目录 micyou-daemon
+
+          Tauri 前端依赖(如缺失):
+            sudo apt install libwebkit2gtk-4.1-0 libgtk-3-0
+
+          Slint 渲染:默认自动选择;无 GPU/花屏时可用软件渲染:
+            SLINT_BACKEND=winit-software ./micyou-slint-frontend
+
+          无虚拟麦克风设备时后端仍可运行(输出静音),日志见
+          ~/.config/micyou/logs/daemon.log
+          NOTES
+          else
+            cat > "$STAGE"/RUN-README.txt <<'NOTES'
+          MicYou libmicyou 测试构建 — macOS (Apple Silicon / arm64, 未签名)
+
+          首次运行需解除隔离属性(二进制未经 Apple 签名/公证):
+            xattr -cr .
+          或 右键 → 打开。
+
+          运行(建议在终端中):
+            ./micyou-slint-frontend          # Slint GUI,后端内嵌
+            ./micyou-daemon --stdio          # 无头后端
+            ./micyou-tauri-frontend          # Tauri GUI,自动拉起同目录 micyou-daemon
+
+          注意:macOS 平台无 AEC(与原实现一致);无虚拟麦克风时输出静音但流程可测。
+          NOTES
+          fi
+          (cd stage && zip -r "../micyou-frontends-${{ matrix.platform }}.zip" micyou)
+          ls -la micyou-frontends-*.zip
+
+      - name: Package (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $stage = "stage\micyou"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item target\release\micyou-daemon.exe $stage
+          Copy-Item frontends\slint\target\release\micyou-slint-frontend.exe $stage
+          Copy-Item frontends\tauri\target\release\micyou-tauri-frontend.exe $stage
+          (git rev-parse --short HEAD) + "`n" + (Get-Date).ToUniversalTime() | Set-Content $stage\VERSION.txt
+          @'
+          MicYou libmicyou 测试构建 — Windows x64 (未签名)
+
+          运行:
+            micyou-slint-frontend.exe        # Slint GUI,后端内嵌,双击即跑
+            micyou-daemon.exe --stdio        # 无头后端
+            micyou-tauri-frontend.exe        # Tauri GUI,自动拉起同目录 micyou-daemon.exe
+
+          SmartScreen 提示"未知发布者"时: 更多信息 → 仍要运行。
+          WebView2 运行时: Win10/11 一般已内置; 若 Tauri 窗口空白请安装
+          "Microsoft Edge WebView2 Runtime"。
+
+          虚拟麦克风(VB-CABLE)未安装时后端仍运行(输出静音);
+          可通过 Tauri/Slint 界面或 RPC devices/vbcable/install 安装。
+          日志: %APPDATA%\micyou\logs\daemon.log
+          '@ | Set-Content -Encoding UTF8 $stage\RUN-README.txt
+          Compress-Archive -Path stage\micyou -DestinationPath "micyou-frontends-${{ matrix.platform }}.zip" -Force
+          Get-Item micyou-frontends-*.zip | Format-List Name,Length
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: micyou-frontends-${{ matrix.platform }}
+          path: micyou-frontends-${{ matrix.platform }}.zip
+          if-no-files-found: error
+
+      - name: Publish to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -eu
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAG="${{ github.ref_name }}"
+            EXTRA=()
+          else
+            TAG="dev-builds"
+            EXTRA=(--prerelease)
+          fi
+          gh release create "$TAG" \
+            --title "$TAG (automated test build)" \
+            --notes "Automated frontend/daemon test builds from $(git rev-parse --short HEAD). 解压后见 RUN-README.txt。" \
+            --target "${{ github.sha }}" \
+            "${EXTRA[@]}" || true
+          gh release upload "$TAG" micyou-frontends-${{ matrix.platform }}.zip --clobber
