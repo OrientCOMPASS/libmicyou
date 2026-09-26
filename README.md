@@ -37,6 +37,7 @@ MicYou 桌面端后端的独立重构：前后端分离、与 Tauri 解耦的无
 - [docs/architecture.md](./docs/architecture.md) — 模块拓扑、数据流、生命周期与并发设计
 - [docs/rpc-api.md](./docs/rpc-api.md) — JSON-RPC 契约全表（方法/事件/错误码/传输）
 - [docs/plugin-api-v3.md](./docs/plugin-api-v3.md) — 插件解放：`call_host` 桥与事件订阅
+- [docs/migration.md](./docs/migration.md) — 原 Tauri/CLI/TUI 前端迁移指南（事件与方法对照表）
 
 ## 快速开始
 
