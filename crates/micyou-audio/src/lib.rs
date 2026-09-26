@@ -19,6 +19,7 @@ pub mod dsp;
 pub mod engine;
 pub mod loopback;
 pub mod mixer;
+pub mod opus;
 
 pub use aec::AecFailure;
 #[cfg(feature = "dsp")]

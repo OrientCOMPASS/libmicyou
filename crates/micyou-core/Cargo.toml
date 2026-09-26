@@ -7,6 +7,15 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+default = ["vbcable", "adb", "web"]
+# Windows VB-CABLE installer flow
+vbcable = []
+# USB mode via adb reverse
+adb = []
+# Browser (web) streaming mode — enables the transport's TLS WebSocket server
+web = ["micyou-transport/web"]
+
 [dependencies]
 micyou-protocol.workspace = true
 micyou-audio = { workspace = true, features = ["dsp", "noise-suppression"] }

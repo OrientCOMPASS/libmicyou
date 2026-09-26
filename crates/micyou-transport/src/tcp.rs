@@ -89,7 +89,7 @@ impl Drop for TaskGuard {
     }
 }
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Serialize, serde::Deserialize, Clone, Debug)]
 pub struct DeviceInfo {
     pub name: String,
     pub ip: String,
