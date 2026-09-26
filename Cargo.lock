@@ -2247,8 +2247,9 @@ name = "micyou-client"
 version = "0.1.0"
 dependencies = [
  "futures-util",
- "log",
  "micyou-api",
+ "micyou-audio",
+ "micyou-transport",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
@@ -2361,6 +2362,7 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "tokio-util",
+ "winapi",
 ]
 
 [[package]]
