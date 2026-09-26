@@ -157,7 +157,7 @@ void Session::handleLine(const QByteArray &line)
 
 void Session::onProcessError(QProcess::ProcessError error)
 {
-    if (error == QProcess::FailedStart)
+    if (error == QProcess::FailedToStart)
         failAll(QStringLiteral("daemon failed to start"));
 }
 

@@ -1308,8 +1308,8 @@ void MainWindow::onEvent(const QString &type, const QJsonObject &data)
         logEvent(QStringLiteral("下载 %1: %2/%3%4")
                      .arg(jstr(data, "id"))
                      .arg(static_cast<qint64>(data.value(QStringLiteral("downloaded")).toDouble()))
-                     .arg(static_cast<qint64>(data.value(QStringLiteral("total")).toDouble()),
-                          jbool(data, "done") ? QStringLiteral(" ✔") : QString()));
+                     .arg(static_cast<qint64>(data.value(QStringLiteral("total")).toDouble()))
+                     .arg(jbool(data, "done") ? QStringLiteral(" ✔") : QString()));
     } else if (type == QLatin1String("uiRequest")) {
         logEvent(QStringLiteral("UI 请求（本前端未实现插件面板窗口）: %1")
                      .arg(QString::fromUtf8(QJsonDocument(data.value(QStringLiteral("request")).toObject()).toJson(QJsonDocument::Compact))));
