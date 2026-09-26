@@ -358,6 +358,59 @@ async fn phone_session_end_to_end() {
         assert!(status.is_server_running, "running after restart");
         backend.stop_server().await.expect("second stop");
 
+        // ── 9. IPv6 loopback cycle on the SAME backend ────────────────────
+        // (one backend per process is the production shape; a second
+        // Backend instance in one Windows process races the WASAPI stack)
+        backend
+            .start_server(StartServerParams {
+                port: Some(port),
+                mode: Some("wifi".to_string()),
+                bind_address: Some("::1".to_string()),
+                ..Default::default()
+            })
+            .await
+            .expect("server starts on ::1");
+
+        let mut tcp6 = TcpStream::connect(("::1", port))
+            .await
+            .expect("v6 tcp connect");
+        tcp6.write_all(HANDSHAKE_CLIENT_STR).await.unwrap();
+        tcp6.flush().await.unwrap();
+        let mut reply6 = [0u8; HANDSHAKE_SERVER_STR.len()];
+        tokio::time::timeout(Duration::from_secs(5), tcp6.read_exact(&mut reply6))
+            .await
+            .expect("v6 handshake reply timeout")
+            .expect("v6 handshake reply read");
+        assert_eq!(&reply6, HANDSHAKE_SERVER_STR);
+
+        let connect6 = MessageWrapper {
+            connect: Some(ConnectMessage { session_id: 77 }),
+            ..Default::default()
+        };
+        tcp6.write_all(&frame(&connect6)).await.unwrap();
+        tcp6.flush().await.unwrap();
+        wait_for_event(
+            &mut events,
+            |e| matches!(e, ServerEvent::DeviceConnected { .. }),
+            "deviceConnected over v6",
+        )
+        .await;
+
+        let udp6 = UdpSocket::bind("::1:0").await.unwrap();
+        let dest6 = format!("[::1]:{}", port + 1);
+        for seq in 0..24 {
+            let packet = udp_datagram(&audio_packet(seq, 77));
+            udp6.send_to(&packet, &dest6).await.expect("v6 udp send");
+        }
+        wait_for_event(
+            &mut events,
+            |e| matches!(e, ServerEvent::AudioLevel { .. }),
+            "audioLevel over v6",
+        )
+        .await;
+
+        backend.stop_server().await.expect("v6 stop");
+
         backend.core.shutdown();
     };
 
@@ -365,6 +418,10 @@ async fn phone_session_end_to_end() {
         .await
         .expect("phone loopback scenario timed out");
 }
+
+/// PongMessage re-export guard: keeps the import honest for future edits.
+#[allow(dead_code)]
+fn _type_anchor(_p: PongMessage) {}
 
 /// PongMessage re-export guard: keeps the import honest for future edits.
 #[allow(dead_code)]

@@ -104,6 +104,10 @@ async fn embedded_session_full_cycle() {
         )
         .await;
 
+        // a second start while running must fail cleanly (lifecycle gate)
+        let second = session.start(port, "wifi").await;
+        assert!(second.is_err(), "double start must be rejected");
+
         // stop
         session.stop().await.expect("stop");
         wait_for_event(
@@ -122,26 +126,4 @@ async fn embedded_session_full_cycle() {
     tokio::time::timeout(Duration::from_secs(120), scenario)
         .await
         .expect("slint session scenario timed out");
-}
-
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn double_start_reports_error_not_panic() {
-    let _serial = scenario_lock();
-    let scenario = async {
-        let _dir = isolated_config_dir();
-        let session = Session::embedded().await.expect("embedded session");
-        let port = free_port();
-        session.start(port, "wifi").await.expect("first start");
-
-        // A second start while running must fail cleanly (lifecycle gate).
-        let second = session.start(port, "wifi").await;
-        assert!(second.is_err(), "double start must be rejected");
-
-        session.stop().await.expect("stop");
-        session.shutdown();
-    };
-
-    tokio::time::timeout(Duration::from_secs(90), scenario)
-        .await
-        .expect("double-start scenario timed out");
 }
