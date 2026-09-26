@@ -45,7 +45,7 @@ async fn wait_for_event(
     loop {
         match tokio::time::timeout_at(deadline, rx.recv()).await {
             Ok(Ok(event)) => {
-                if pred(&event) {
+                if pred(event.as_ref()) {
                     return;
                 }
             }

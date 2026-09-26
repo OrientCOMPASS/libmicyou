@@ -29,26 +29,18 @@ impl Default for AppState {
     }
 }
 
-async fn with_session<R, F, Fut>(state: &State<'_, AppState>, f: F) -> Result<R, String>
-where
-    F: FnOnce(&Session) -> Fut,
-    Fut: std::future::Future<Output = R>,
-{
-    let guard = state.session.lock().await;
-    let session = guard
-        .as_ref()
-        .ok_or_else(|| "backend session not connected".to_string())?;
-    Ok(f(session).await)
-}
+const NO_SESSION: &str = "backend session not connected";
 
 #[tauri::command]
-async fn backend_connected(state: State<'_, AppState>) -> bool {
-    state.session.lock().await.is_some()
+async fn backend_connected(state: State<'_, AppState>) -> Result<bool, String> {
+    Ok(state.session.lock().await.is_some())
 }
 
 #[tauri::command]
 async fn backend_status(state: State<'_, AppState>) -> Result<ServerStatus, String> {
-    with_session(&state, |s| async { s.status().await }).await?
+    let guard = state.session.lock().await;
+    let session = guard.as_ref().ok_or(NO_SESSION)?;
+    session.status().await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -59,31 +51,32 @@ async fn backend_start(
 ) -> Result<String, String> {
     let port = port.unwrap_or(18554);
     let mode = mode.unwrap_or_else(|| "wifi".to_string());
-    let message = with_session(&state, |s| async { s.start(port, &mode).await })
-        .await?
-        .map_err(|e| e.to_string())?;
-    Ok(message)
+    let guard = state.session.lock().await;
+    let session = guard.as_ref().ok_or(NO_SESSION)?;
+    session.start(port, &mode).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 async fn backend_stop(state: State<'_, AppState>) -> Result<String, String> {
-    let message = with_session(&state, |s| async { s.stop().await })
-        .await?
-        .map_err(|e| e.to_string())?;
-    Ok(message)
+    let guard = state.session.lock().await;
+    let session = guard.as_ref().ok_or(NO_SESSION)?;
+    session.stop().await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 async fn backend_set_mute(state: State<'_, AppState>, muted: bool) -> Result<(), String> {
-    with_session(&state, |s| async { s.set_muted(muted).await })
-        .await?
-        .map_err(|e| e.to_string())
+    let guard = state.session.lock().await;
+    let session = guard.as_ref().ok_or(NO_SESSION)?;
+    session.set_muted(muted).await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 async fn backend_set_monitoring(state: State<'_, AppState>, enabled: bool) -> Result<(), String> {
-    with_session(&state, |s| async { s.set_monitoring(enabled).await })
-        .await?
+    let guard = state.session.lock().await;
+    let session = guard.as_ref().ok_or(NO_SESSION)?;
+    session
+        .set_monitoring(enabled)
+        .await
         .map_err(|e| e.to_string())
 }
 
