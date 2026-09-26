@@ -44,14 +44,23 @@ pub fn get_lan_ips() -> Vec<String> {
     let mut ips = Vec::new();
     if let Ok(interfaces) = local_ip_address::list_afinet_netifas() {
         for (_, ip) in interfaces {
-            if ip.is_loopback() || !ip.is_ipv4() {
+            if ip.is_loopback() {
                 continue;
             }
-            let ip_str = ip.to_string();
-            if ip_str.starts_with("198.18.") || ip_str.starts_with("169.254.") {
-                continue;
+            match ip {
+                IpAddr::V4(_) => {
+                    let ip_str = ip.to_string();
+                    if ip_str.starts_with("198.18.") || ip_str.starts_with("169.254.") {
+                        continue;
+                    }
+                    ips.push(ip_str);
+                }
+                IpAddr::V6(_) => {
+                    if crate::net::is_advertisable_v6(&ip) {
+                        ips.push(ip.to_string());
+                    }
+                }
             }
-            ips.push(ip_str);
         }
     }
     ips
@@ -225,7 +234,7 @@ use rustls::pki_types::CertificateDer;
 use rustls::ServerConfig;
 use std::io::BufReader;
 use std::net::SocketAddr;
-use tokio::net::{TcpListener, TcpStream};
+use tokio::net::TcpStream;
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tokio_rustls::{server::TlsStream, TlsAcceptor};
 
@@ -243,7 +252,10 @@ fn is_valid_origin(origin: Option<&str>) -> bool {
             let o = o.to_lowercase();
             o.contains("localhost")
                 || o.contains("127.0.0.1")
-                || get_lan_ips().iter().any(|ip| o.contains(ip))
+                || o.contains("[::1]")
+                || get_lan_ips()
+                    .iter()
+                    .any(|ip| o.contains(ip) || o.contains(&format!("[{ip}]")))
         }
     }
 }
@@ -421,7 +433,8 @@ pub struct WebServerState {
 }
 
 struct TlsListener {
-    tcp: TcpListener,
+    tcp: futures_util::stream::SelectAll<tokio_stream::wrappers::TcpListenerStream>,
+    local: SocketAddr,
     acceptor: TlsAcceptor,
     handshake_slots: Arc<Semaphore>,
     completed: tokio::sync::mpsc::Sender<(TlsStream<TcpStream>, SocketAddr)>,
@@ -436,7 +449,7 @@ impl Listener for TlsListener {
         loop {
             tokio::select! {
                 Some(accepted) = self.completed_rx.recv() => return accepted,
-                accept_result = self.tcp.accept() => {
+                Some(accept_result) = tokio_stream::StreamExt::next(&mut self.tcp) => {
                     match accept_result {
                         Ok((stream, addr)) => {
                             let permit = match self.handshake_slots.clone().try_acquire_owned() {
@@ -465,7 +478,7 @@ impl Listener for TlsListener {
     }
 
     fn local_addr(&self) -> std::io::Result<SocketAddr> {
-        self.tcp.local_addr()
+        Ok(self.local)
     }
 }
 
@@ -537,24 +550,35 @@ impl WebServer {
 
         let acceptor = TlsAcceptor::from(Arc::new(tls_config));
 
-        let addr: SocketAddr = format!("0.0.0.0:{}", port)
-            .parse()
-            .map_err(|e| format!("Invalid address: {}", e))?;
-
-        let tcp = TcpListener::bind(addr)
+        let listeners = crate::net::bind_tcp_listeners(crate::net::wildcard_dual(), port)
             .await
             .map_err(|e| format!("Web server bind error: {}", e))?;
+        let local = listeners
+            .first()
+            .and_then(|l| l.local_addr().ok())
+            .unwrap_or_else(|| SocketAddr::from(([0, 0, 0, 0, 0, 0, 0, 0], port)));
+        let bound: Vec<String> = listeners
+            .iter()
+            .filter_map(|l| l.local_addr().ok())
+            .map(|a| a.to_string())
+            .collect();
+        let tcp: futures_util::stream::SelectAll<tokio_stream::wrappers::TcpListenerStream> =
+            listeners
+                .into_iter()
+                .map(tokio_stream::wrappers::TcpListenerStream::new)
+                .collect();
 
         let (completed, completed_rx) = tokio::sync::mpsc::channel(MAX_TLS_HANDSHAKES);
         let tls_listener = TlsListener {
             tcp,
+            local,
             acceptor,
             handshake_slots: Arc::new(Semaphore::new(MAX_TLS_HANDSHAKES)),
             completed,
             completed_rx,
         };
 
-        log::info!("Web server listening on https://0.0.0.0:{}", port);
+        log::info!("Web server listening on https://{}", bound.join(", "));
 
         let new_token = CancellationToken::new();
         {

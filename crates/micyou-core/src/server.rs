@@ -547,6 +547,33 @@ impl ServerCore {
             );
         }
 
+        // Pre-open the persistent output device OUTSIDE the pipeline's
+        // startup budget: first open can be slow (Linux PipeWire virtual
+        // device creation, cold cpal/ALSA enumeration) and must not consume
+        // the 10 s pipeline ready timeout. Idempotent — the pipeline thread
+        // re-checks cheaply.
+        {
+            let output = self.audio_output.clone();
+            let device = output_device.clone();
+            let res_root = resource_root.clone();
+            let warm = tokio::task::spawn_blocking(move || {
+                pipeline::ensure_audio_output_started(
+                    &output,
+                    device,
+                    output_buffer_ms,
+                    res_root.as_deref(),
+                )
+            });
+            match tokio::time::timeout(std::time::Duration::from_secs(30), warm).await {
+                Ok(Ok(true)) => log::info!("[Audio] Output device pre-opened"),
+                Ok(Ok(false)) => log::warn!(
+                    "[Audio] Output device unavailable (continuing; audio will be silent)"
+                ),
+                Ok(Err(join)) => log::error!("[Audio] Output warm-up task failed: {join}"),
+                Err(_) => log::error!("[Audio] Output warm-up timed out after 30 s (continuing)"),
+            }
+        }
+
         // Audio pipeline (shared by all modes). Android packets are ~7 ms,
         // so 128 slots bound queued latency while leaving scheduling headroom.
         self.bridge.set_mode(mode);

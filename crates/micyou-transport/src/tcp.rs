@@ -140,15 +140,26 @@ pub async fn start_tcp_server(
         takeover_lock,
         active_audio_session,
     } = ctx;
-    let listener = match TcpListener::bind(format!("{}:{}", bind_address, port)).await {
-        Ok(listener) => listener,
-        Err(error) => {
-            let _ = ready.send(Err(error.to_string()));
-            return Err(Box::new(error));
-        }
-    };
+    let listeners =
+        match crate::net::bind_tcp_listeners(crate::net::parse_bind(&bind_address), port).await {
+            Ok(listeners) => listeners,
+            Err(error) => {
+                let _ = ready.send(Err(error.to_string()));
+                return Err(Box::new(error));
+            }
+        };
+    let bound: Vec<String> = listeners
+        .iter()
+        .filter_map(|l| l.local_addr().ok())
+        .map(|a| a.to_string())
+        .collect();
     let _ = ready.send(Ok(()));
-    log::info!("TCP Control Server listening on {}:{}", bind_address, port);
+    log::info!("TCP Control Server listening on {}", bound.join(", "));
+    let mut incoming: futures_util::stream::SelectAll<tokio_stream::wrappers::TcpListenerStream> =
+        listeners
+            .into_iter()
+            .map(tokio_stream::wrappers::TcpListenerStream::new)
+            .collect();
 
     let mut clients = JoinSet::new();
     let client_slots = Arc::new(tokio::sync::Semaphore::new(MAX_CONCURRENT_CLIENTS));
@@ -163,7 +174,7 @@ pub async fn start_tcp_server(
                     log::error!("TCP client task failed: {}", e);
                 }
             }
-            accept_result = listener.accept() => {
+            Some(accept_result) = tokio_stream::StreamExt::next(&mut incoming) => {
                 match accept_result {
                     Ok((socket, addr)) => {
                         // Control frames (ping/pong) are ~60 bytes; without
@@ -454,14 +465,15 @@ async fn handle_client(
                 | ActiveAudioSession::Bound { epoch, .. } => epoch,
             };
             let epoch = previous_epoch.wrapping_add(1).max(1);
+            let normalized_peer = crate::net::normalize_ip(addr.ip());
             *active_audio = match expected_session {
                 ExpectedAudioSession::Inactive => ActiveAudioSession::Inactive,
                 ExpectedAudioSession::UnboundLegacy => ActiveAudioSession::UnboundLegacy {
-                    peer_ip: addr.ip(),
+                    peer_ip: normalized_peer,
                     epoch,
                 },
                 ExpectedAudioSession::Bound(session_id) => ActiveAudioSession::Bound {
-                    peer_ip: addr.ip(),
+                    peer_ip: normalized_peer,
                     session_id,
                     epoch,
                 },
@@ -480,9 +492,10 @@ async fn handle_client(
     drop(_takeover_guard);
 
     log::info!("Handshake successful with {}", addr);
+    let peer_ip = crate::net::normalize_ip(addr.ip());
     let device_info = DeviceInfo {
         name: "MicYou Mobile".to_string(),
-        ip: addr.ip().to_string(),
+        ip: peer_ip.to_string(),
         latency: 12,
     };
     let current_time = std::time::SystemTime::now()
@@ -506,7 +519,7 @@ async fn handle_client(
         &active_connection,
         &active_audio_session,
         &config,
-        addr.ip(),
+        crate::net::normalize_ip(addr.ip()),
     )
     .await?;
 
@@ -628,7 +641,7 @@ async fn handle_client(
                 &active_connection,
                 &active_audio_session,
                 &config,
-                addr.ip(),
+                crate::net::normalize_ip(addr.ip()),
             )
             .await?;
         }

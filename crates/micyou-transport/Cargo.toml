@@ -15,6 +15,8 @@ web = ["dep:axum", "dep:rcgen", "dep:rustls", "dep:tokio-rustls", "dep:rustls-pe
 micyou-protocol.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
+tokio-stream = { workspace = true, features = ["net"] }
+futures-util.workspace = true
 prost.workspace = true
 serde.workspace = true
 log.workspace = true

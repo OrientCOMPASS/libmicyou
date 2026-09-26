@@ -30,18 +30,19 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpStream, UdpSocket};
 use tokio::sync::broadcast;
 
-/// Isolate config/state into a throwaway directory and pick a free port.
+/// Isolate config/state into ONE throwaway directory per test process (the
+/// scenarios in this file may run in parallel) and pick a free port.
 fn test_env() -> (std::path::PathBuf, u16) {
-    let dir = std::env::temp_dir().join(format!(
-        "libmicyou-phone-loopback-{}-{}",
-        std::process::id(),
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    ));
-    std::fs::create_dir_all(&dir).unwrap();
-    std::env::set_var("MICYOU_CONFIG_DIR", &dir);
+    static DIR: std::sync::OnceLock<std::path::PathBuf> = std::sync::OnceLock::new();
+    let dir = DIR
+        .get_or_init(|| {
+            let dir = std::env::temp_dir()
+                .join(format!("libmicyou-phone-loopback-{}", std::process::id()));
+            std::fs::create_dir_all(&dir).unwrap();
+            std::env::set_var("MICYOU_CONFIG_DIR", &dir);
+            dir
+        })
+        .clone();
 
     // Ask the OS for a free TCP port; UDP port+1 is assumed free as well.
     let probe = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
@@ -358,3 +359,82 @@ async fn phone_session_end_to_end() {
 /// PongMessage re-export guard: keeps the import honest for future edits.
 #[allow(dead_code)]
 fn _type_anchor(_p: PongMessage) {}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn phone_session_over_ipv6_loopback() {
+    let scenario = async {
+        let (_dir, port) = test_env();
+        let backend = Arc::new(Backend::new());
+        let mut events = backend.core.bus.subscribe();
+
+        // ── start bound to the IPv6 loopback ──────────────────────────────
+        backend
+            .start_server(StartServerParams {
+                port: Some(port),
+                mode: Some("wifi".to_string()),
+                bind_address: Some("::1".to_string()),
+                ..Default::default()
+            })
+            .await
+            .expect("server starts on ::1");
+
+        // ── TCP handshake over v6 ─────────────────────────────────────────
+        let mut tcp = TcpStream::connect(("::1", port))
+            .await
+            .expect("v6 tcp connect");
+        tcp.write_all(HANDSHAKE_CLIENT_STR).await.unwrap();
+        tcp.flush().await.unwrap();
+        let mut reply = [0u8; HANDSHAKE_SERVER_STR.len()];
+        tokio::time::timeout(Duration::from_secs(5), tcp.read_exact(&mut reply))
+            .await
+            .expect("handshake reply timeout")
+            .expect("handshake reply read");
+        assert_eq!(&reply, HANDSHAKE_SERVER_STR);
+
+        let connect = MessageWrapper {
+            connect: Some(ConnectMessage { session_id: 77 }),
+            ..Default::default()
+        };
+        tcp.write_all(&frame(&connect)).await.unwrap();
+        tcp.flush().await.unwrap();
+
+        wait_for_event(
+            &mut events,
+            |e| matches!(e, ServerEvent::DeviceConnected { .. }),
+            "deviceConnected over v6",
+        )
+        .await;
+
+        // ── UDP audio over v6 ─────────────────────────────────────────────
+        let udp = UdpSocket::bind("::1:0").await.unwrap();
+        let dest = format!("[::1]:{}", port + 1);
+        for seq in 0..24 {
+            let packet = udp_datagram(&audio_packet(seq, 77));
+            udp.send_to(&packet, &dest).await.expect("v6 udp send");
+        }
+        wait_for_event(
+            &mut events,
+            |e| matches!(e, ServerEvent::AudioLevel { .. }),
+            "audioLevel over v6",
+        )
+        .await;
+
+        // ── stop and restart to prove v6 teardown is clean ────────────────
+        backend.stop_server().await.expect("stop");
+        backend
+            .start_server(StartServerParams {
+                port: Some(port),
+                mode: Some("wifi".to_string()),
+                bind_address: Some("::1".to_string()),
+                ..Default::default()
+            })
+            .await
+            .expect("v6 restart on same port");
+        backend.stop_server().await.expect("second stop");
+        backend.core.shutdown();
+    };
+
+    tokio::time::timeout(Duration::from_secs(120), scenario)
+        .await
+        .expect("ipv6 loopback scenario timed out");
+}

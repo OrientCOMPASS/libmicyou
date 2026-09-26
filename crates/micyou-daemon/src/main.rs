@@ -28,9 +28,15 @@ struct Args {
     #[arg(long)]
     stdio: bool,
 
-    /// Serve JSON-RPC over WebSocket at this address, e.g. 127.0.0.1:9610.
+    /// Serve JSON-RPC over WebSocket at this address, e.g. 127.0.0.1:9610
+    /// (or [::1]:9610 / [::]:9610 for IPv6; the socket is dual-stack).
     #[arg(long, value_name = "ADDR")]
     ws: Option<SocketAddr>,
+
+    /// Host a static web-UI bundle (e.g. the Flutter-web build) at
+    /// http://<ws-addr>/ui/ alongside the WebSocket endpoint.
+    #[arg(long, value_name = "DIR", requires = "ws")]
+    web_ui: Option<PathBuf>,
 
     /// Override the shared config directory (default: platform micyou dir).
     #[arg(long, value_name = "DIR")]
@@ -119,8 +125,9 @@ async fn main() -> Result<(), String> {
 
     let ws_task = args.ws.map(|addr| {
         let managed_ws = managed.rpc.clone();
+        let web_ui = args.web_ui.clone();
         tokio::spawn(async move {
-            if let Err(e) = micyou_rpc::ws::serve_ws(managed_ws, addr).await {
+            if let Err(e) = micyou_rpc::ws::serve_ws_with_ui(managed_ws, addr, web_ui).await {
                 log::error!("[rpc] websocket transport failed: {e}");
             }
         })

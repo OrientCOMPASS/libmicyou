@@ -16,11 +16,13 @@
 //! docs/rpc-api.md "Security").
 
 use std::net::SocketAddr;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
-use axum::extract::State;
-use axum::response::{IntoResponse, Json};
+use axum::extract::{Path, State};
+use axum::http::{header, StatusCode};
+use axum::response::{IntoResponse, Json, Redirect, Response};
 use axum::routing::get;
 use axum::Router;
 use futures_util::{SinkExt, StreamExt};
@@ -28,13 +30,29 @@ use tokio::sync::mpsc;
 
 use crate::router::RpcService;
 
+/// Shared router state: the RPC service plus an optional static web-UI
+/// directory (e.g. a Flutter-web bundle) served under `/ui/`.
+type Shared = (Arc<RpcService>, Option<PathBuf>);
+
 /// Serve the WebSocket transport until the process ends (or the returned
 /// server task is aborted). Returns the bound address error, if any.
 pub async fn serve_ws(service: Arc<RpcService>, addr: SocketAddr) -> Result<(), String> {
+    serve_ws_with_ui(service, addr, None).await
+}
+
+/// Like [`serve_ws`], additionally hosting a static frontend bundle at
+/// `/ui/` (and redirecting `/` there) when `web_ui` is set.
+pub async fn serve_ws_with_ui(
+    service: Arc<RpcService>,
+    addr: SocketAddr,
+    web_ui: Option<PathBuf>,
+) -> Result<(), String> {
     let app = Router::new()
         .route("/rpc", get(ws_upgrade))
         .route("/health", get(health))
-        .with_state(service);
+        .route("/", get(root))
+        .route("/ui/{*path}", get(static_file))
+        .with_state((service, web_ui));
 
     let listener = tokio::net::TcpListener::bind(addr)
         .await
@@ -49,7 +67,57 @@ pub async fn serve_ws(service: Arc<RpcService>, addr: SocketAddr) -> Result<(), 
         .map_err(|e| format!("ws server: {e}"))
 }
 
-async fn health(State(service): State<Arc<RpcService>>) -> impl IntoResponse {
+async fn root(State((_, ui)): State<Shared>) -> impl IntoResponse {
+    if ui.is_some() {
+        Redirect::to("/ui/").into_response()
+    } else {
+        StatusCode::NOT_FOUND.into_response()
+    }
+}
+
+fn mime_of(path: &std::path::Path) -> &'static str {
+    match path.extension().and_then(|e| e.to_str()) {
+        Some("html") | Some("htm") => "text/html; charset=utf-8",
+        Some("js") | Some("mjs") => "text/javascript; charset=utf-8",
+        Some("css") => "text/css; charset=utf-8",
+        Some("json") | Some("map") => "application/json",
+        Some("wasm") => "application/wasm",
+        Some("png") => "image/png",
+        Some("jpg") | Some("jpeg") => "image/jpeg",
+        Some("svg") => "image/svg+xml",
+        Some("ico") => "image/x-icon",
+        Some("ttf") => "font/ttf",
+        Some("otf") => "font/otf",
+        Some("woff") => "font/woff",
+        Some("woff2") => "font/woff2",
+        Some("txt") => "text/plain; charset=utf-8",
+        _ => "application/octet-stream",
+    }
+}
+
+/// Minimal path-traversal-safe static file server for the bundled web UI.
+async fn static_file(State((_, dir)): State<Shared>, Path(path): Path<String>) -> Response {
+    let Some(dir) = dir else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    let rel = path.trim_start_matches('/');
+    if rel.split(['/', '\\']).any(|seg| seg == "..") {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    let mut file = dir.join(if rel.is_empty() { "index.html" } else { rel });
+    if file.is_dir() {
+        file = file.join("index.html");
+    }
+    match tokio::fs::read(&file).await {
+        Ok(bytes) => {
+            let mime = mime_of(&file);
+            ([(header::CONTENT_TYPE, mime)], bytes).into_response()
+        }
+        Err(_) => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+async fn health(State((service, _)): State<Shared>) -> impl IntoResponse {
     Json(serde_json::json!({
         "status": "ok",
         "backend": "libmicyou",
@@ -59,10 +127,7 @@ async fn health(State(service): State<Arc<RpcService>>) -> impl IntoResponse {
     }))
 }
 
-async fn ws_upgrade(
-    ws: WebSocketUpgrade,
-    State(service): State<Arc<RpcService>>,
-) -> impl IntoResponse {
+async fn ws_upgrade(ws: WebSocketUpgrade, State((service, _)): State<Shared>) -> impl IntoResponse {
     ws.on_upgrade(move |socket| handle_socket(socket, service))
 }
 

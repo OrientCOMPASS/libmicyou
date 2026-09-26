@@ -32,6 +32,15 @@ fn ss(v: impl ToString) -> SharedString {
     SharedString::from(v.to_string())
 }
 
+/// Bracket IPv6 literals for URL display.
+fn micyou_api_url_host(ip: &str) -> String {
+    if ip.contains(':') && !ip.starts_with('[') {
+        format!("[{ip}]")
+    } else {
+        ip.to_string()
+    }
+}
+
 fn log_line(ui: &Weak<MainWindow>, line: &str) {
     let line = line.to_string();
     upd(ui, move |u| {
@@ -410,7 +419,7 @@ impl Ctl {
     }
 
     async fn usb_enable(&self) {
-        let ui = self.ui.upgrade().unwrap();
+        let Some(ui) = self.ui.upgrade() else { return };
         let index = ui.get_usb_index();
         let port: u16 = ui.get_q_port().to_string().trim().parse().unwrap_or(18554);
         drop(ui);
@@ -463,7 +472,7 @@ impl Ctl {
             .map(|a| {
                 a.iter()
                     .filter_map(Value::as_str)
-                    .map(|ip| ss(format!("https://{ip}:{web_port}")))
+                    .map(|ip| ss(format!("https://{}:{web_port}", micyou_api_url_host(ip))))
                     .collect()
             })
             .unwrap_or_default();
@@ -1267,11 +1276,22 @@ fn main() {
     wire(&ui, &cmd_tx);
 
     let ui_weak = ui.as_weak();
+    let ui_panic = ui.as_weak();
     std::thread::Builder::new()
         .name("slint-controller".into())
         .spawn(move || {
             let runtime = tokio::runtime::Runtime::new().expect("tokio runtime");
-            runtime.block_on(controller_task(ui_weak, cmd_rx));
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                runtime.block_on(controller_task(ui_weak, cmd_rx));
+            }));
+            if result.is_err() {
+                // Surface the crash in the UI log — the window stays usable
+                // enough to read it, and stderr gets the backtrace.
+                log_line(
+                    &ui_panic,
+                    "✗ 控制器线程崩溃（panic）；请查看 stderr 并重启前端",
+                );
+            }
         })
         .expect("spawn controller thread");
 

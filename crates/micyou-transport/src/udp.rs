@@ -122,26 +122,19 @@ pub async fn start_udp_server(
     active_audio_session: SharedActiveAudioSession,
     ready: tokio::sync::oneshot::Sender<Result<(), String>>,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
-    let result = (|| -> Result<tokio::net::UdpSocket, Box<dyn Error + Send + Sync>> {
-        let addr: std::net::SocketAddr = format!("{}:{}", bind_address, port).parse()?;
-        let socket2 = socket2::Socket::new(socket2::Domain::IPV4, socket2::Type::DGRAM, None)?;
-        if let Err(e) = socket2.set_recv_buffer_size(2 * 1024 * 1024) {
-            log::warn!("Failed to set UDP receive buffer size to 2MB: {}", e);
-        }
-        socket2.bind(&addr.into())?;
-        socket2.set_nonblocking(true)?;
-        let std_socket: std::net::UdpSocket = socket2.into();
-        Ok(UdpSocket::from_std(std_socket)?)
-    })();
-    let socket = match result {
+    let socket = match crate::net::bind_udp_socket(crate::net::parse_bind(&bind_address), port) {
         Ok(socket) => socket,
         Err(error) => {
             let _ = ready.send(Err(error.to_string()));
-            return Err(error);
+            return Err(Box::new(error) as Box<dyn Error + Send + Sync>);
         }
     };
     let _ = ready.send(Ok(()));
-    log::info!("UDP Audio Server listening on {}", port);
+    let local = socket
+        .local_addr()
+        .map(|a| a.to_string())
+        .unwrap_or_else(|_| format!("{bind_address}:{port}"));
+    log::info!("UDP Audio Server listening on {}", local);
 
     let mut buf = vec![0u8; 65535];
 
@@ -177,7 +170,7 @@ pub async fn start_udp_server(
                             }
                             let AudioPacketAcceptance::Accepted { epoch } = try_accept_audio_packet(
                                 &active_audio_session,
-                                addr.ip(),
+                                crate::net::normalize_ip(addr.ip()),
                                 &audio_packet_ordered,
                             ) else {
                                 continue;

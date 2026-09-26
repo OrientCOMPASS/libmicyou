@@ -37,6 +37,7 @@ pub mod discovery;
 pub mod events;
 pub mod host_info;
 pub mod jitter;
+pub mod net;
 pub mod stats;
 pub mod stream;
 pub mod tcp;
@@ -50,6 +51,7 @@ pub use events::{
 };
 pub use host_info::{query_network_interfaces, NetworkInfo, NetworkInterfaceInfo};
 pub use jitter::JitterBuffer;
+pub use net::{format_url_host_str, normalize_ip, parse_bind, wildcard_dual};
 pub use stats::{AudioMetrics, NetworkStats};
 pub use stream::{AudioStreamEvent, ExpectedAudioSession};
 pub use tcp::{ActiveConnection, DeviceInfo, SharedActiveConnection, SharedTakeoverLock};

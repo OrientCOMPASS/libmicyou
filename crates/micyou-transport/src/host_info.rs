@@ -47,9 +47,26 @@ const VIRTUAL_KEYWORDS: &[&str] = &[
     "flclash",
 ];
 
-/// Rank a candidate IPv4 address for phone connectivity: private home ranges
-/// first, CGNAT/link-local last.
+/// Rank a candidate address for phone connectivity.
+///
+/// IPv6: global unicast (2000::/3) scores just below the proven 192.168/24
+/// home range; unique-local (fc00::/7) ranks like a private v4 range.
+/// IPv4: private home ranges first, CGNAT/link-local last.
 pub fn score_ip(ip: &str) -> i32 {
+    if let Ok(parsed) = ip.parse::<std::net::IpAddr>() {
+        if let std::net::IpAddr::V6(v6) = parsed {
+            if v6.to_ipv4_mapped().is_none() {
+                let first = v6.segments()[0];
+                if first & 0xe000 == 0x2000 {
+                    return 92; // global unicast 2000::/3
+                }
+                if first & 0xfe00 == 0xfc00 {
+                    return 70; // unique local fc00::/7
+                }
+                return 0;
+            }
+        }
+    }
     if ip.starts_with("192.168.") {
         100
     } else if ip.starts_with("172.") {
@@ -78,8 +95,16 @@ pub fn query_network_interfaces() -> Vec<NetworkInterfaceInfo> {
     let mut candidates: Vec<(std::net::IpAddr, String)> = Vec::new();
     if let Ok(interfaces) = local_ip_address::list_afinet_netifas() {
         for (name, ip) in interfaces {
-            if ip.is_loopback() || !ip.is_ipv4() {
+            if ip.is_loopback() {
                 continue;
+            }
+            // IPv4: keep as before. IPv6: only advertisable scopes
+            // (no link-local/multicast/mapped — those need scope ids or
+            // duplicate the v4 entry).
+            if let std::net::IpAddr::V6(_) = ip {
+                if !crate::net::is_advertisable_v6(&ip) {
+                    continue;
+                }
             }
             let name_lower = name.to_lowercase();
             if VIRTUAL_KEYWORDS.iter().any(|kw| name_lower.contains(kw)) {
@@ -140,5 +165,14 @@ mod tests {
     #[test]
     fn interface_query_never_returns_empty() {
         assert!(!query_network_interfaces().is_empty());
+    }
+
+    #[test]
+    fn scoring_covers_ipv6_scopes() {
+        assert!(score_ip("2001:db8::1") > score_ip("172.20.0.1"));
+        assert!(score_ip("192.168.1.1") > score_ip("2001:db8::1"));
+        assert!(score_ip("2001:db8::1") > score_ip("fd00::1"));
+        assert!(score_ip("fd00::1") > score_ip("10.0.0.1"));
+        assert_eq!(score_ip("fe80::1"), 0);
     }
 }

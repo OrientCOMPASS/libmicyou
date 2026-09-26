@@ -196,6 +196,16 @@ impl Managed {
         micyou_rpc::ws::serve_ws(self.rpc.clone(), addr).await
     }
 
+    /// Like [`Managed::serve_ws`], additionally hosting a static frontend
+    /// bundle (e.g. the Flutter-web build) at `http://addr/ui/`.
+    pub async fn serve_ws_with_ui(
+        &self,
+        addr: std::net::SocketAddr,
+        web_ui: Option<std::path::PathBuf>,
+    ) -> Result<(), String> {
+        micyou_rpc::ws::serve_ws_with_ui(self.rpc.clone(), addr, web_ui).await
+    }
+
     /// Attach an in-process session (embedded Rust frontends).
     pub fn attach_local(&self) -> LocalConnection {
         micyou_rpc::local::attach(self.rpc.clone())

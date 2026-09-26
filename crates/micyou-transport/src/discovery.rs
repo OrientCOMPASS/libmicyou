@@ -40,40 +40,12 @@ impl NetworkManager {
     }
 
     fn get_best_ip() -> Option<String> {
-        if let Ok(interfaces) = local_ip_address::list_afinet_netifas() {
-            let mut best_ip = None;
-            for (name, ip) in interfaces {
-                if ip.is_loopback() || !ip.is_ipv4() {
-                    continue;
-                }
-                let ip_str = ip.to_string();
-                let name_lower = name.to_lowercase();
-
-                // Filter out common TUN/VPN and virtual interfaces
-                if ip_str.starts_with("198.18.")
-                    || name_lower.contains("tailscale")
-                    || name_lower.contains("virtual")
-                    || name_lower.contains("wsl")
-                    || name_lower.contains("veth")
-                    || name_lower.contains("flclash")
-                    || name_lower.contains("clash")
-                {
-                    continue;
-                }
-
-                if ip_str.starts_with("192.168.") {
-                    return Some(ip_str); // Prefer 192.168.x.x
-                }
-                if best_ip.is_none() {
-                    best_ip = Some(ip_str);
-                }
-            }
-            if best_ip.is_some() {
-                return best_ip;
-            }
-        }
-        // Fallback
-        local_ip_address::local_ip().map(|ip| ip.to_string()).ok()
+        // host_info already scores and sorts candidates (v4 home ranges
+        // first for stock-client compatibility, then v6 global/ULA).
+        crate::host_info::query_network_interfaces()
+            .first()
+            .map(|i| i.ip.clone())
+            .or_else(|| local_ip_address::local_ip().ok().map(|ip| ip.to_string()))
     }
 
     fn start_mdns_helper(
@@ -88,10 +60,11 @@ impl NetworkManager {
             .unwrap_or_else(|_| "UnknownHost".to_string());
         let instance_name = format!("MicYou ({})", host_name);
 
-        let local_ip = if bind_address == "0.0.0.0" {
-            Self::get_best_ip().unwrap_or_else(|| "127.0.0.1".to_string())
-        } else {
-            bind_address.to_string()
+        let local_ip = match bind_address.trim() {
+            "" | "auto" | "*" | "0.0.0.0" | "::" => {
+                Self::get_best_ip().unwrap_or_else(|| "127.0.0.1".to_string())
+            }
+            specific => specific.to_string(),
         };
 
         let service_fullname = format!("{}.{}", instance_name, service_type);

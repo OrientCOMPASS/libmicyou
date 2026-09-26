@@ -293,6 +293,13 @@ impl Client {
         self.call(method, serde_json::json!({})).await
     }
 
+    fn pending_reap(&self, id: i64) {
+        let pending = self.pending.clone();
+        tokio::spawn(async move {
+            pending.lock().await.remove(&id);
+        });
+    }
+
     async fn send_line(&self, line: String) -> Result<(), ClientError> {
         match &*self.transport {
             Transport::Stdio { stdin, .. } => {
