@@ -12,6 +12,8 @@ struct DirectHost {
     muted_state: Mutex<bool>,
     monitoring_state: Mutex<bool>,
     dsp_state: Mutex<String>,
+    host_calls: Mutex<Vec<(String, String)>>,
+    event_subs: Mutex<Vec<String>>,
 }
 impl HostApi for DirectHost {
     fn log(&self, _level: PluginLogLevel, message: &str) {
@@ -110,7 +112,7 @@ impl HostApi for DirectHost {
     }
 
     fn host_info(&self) -> String {
-        "{\"name\":\"micyou\",\"version\":\"test\",\"apiVersion\":1}".into()
+        "{\"name\":\"libmicyou\",\"version\":\"test\",\"apiVersion\":3}".into()
     }
 
     fn http_request(
@@ -133,6 +135,24 @@ impl HostApi for DirectHost {
 
     fn connected_devices(&self) -> Vec<DeviceSnapshot> {
         Vec::new()
+    }
+
+    fn call_host(&self, method: &str, params_json: &str) -> PluginResult<String> {
+        self.host_calls
+            .lock()
+            .unwrap()
+            .push((method.to_string(), params_json.to_string()));
+        Ok(r#"{"ok":true,"result":{"phase":"running"}}"#.to_string())
+    }
+
+    fn subscribe_host_events(&self, filter: &str) -> PluginResult<()> {
+        self.event_subs.lock().unwrap().push(filter.to_string());
+        Ok(())
+    }
+
+    fn unsubscribe_host_events(&self, filter: &str) -> PluginResult<()> {
+        self.event_subs.lock().unwrap().retain(|f| f != filter);
+        Ok(())
     }
 }
 
@@ -327,5 +347,86 @@ fn dsp_settings_respects_capabilities() {
     assert_eq!(res_get, mpl_result_t::MPL_ERR_PERMISSION);
 
     unsafe { abi::release_host_ctx(table.ctx) };
+    unsafe { abi::release_host_ctx(table2.ctx) };
+}
+
+#[test]
+fn call_host_shim_gates_and_forwards() {
+    let host = Arc::new(DirectHost::default());
+
+    // With host.call: method + params forwarded, envelope written to out buffer.
+    let ctx = Arc::new(NativeHostCtx {
+        host: host.clone(),
+        capabilities: vec![micyou_plugin::capabilities::HOST_CALL.to_string()],
+    });
+    let table = abi::host_table_for(ctx);
+    let method = std::ffi::CString::new("server/status").unwrap();
+    let params = std::ffi::CString::new("{}").unwrap();
+    let mut buf = [0i8; 512];
+    let mut size: u32 = 512;
+    let res = unsafe {
+        (table.call_host)(
+            table.ctx,
+            method.as_ptr(),
+            params.as_ptr(),
+            buf.as_mut_ptr(),
+            &mut size,
+        )
+    };
+    assert_eq!(res, mpl_result_t::MPL_OK);
+    let envelope = unsafe { std::ffi::CStr::from_ptr(buf.as_ptr()) }.to_string_lossy();
+    assert!(envelope.contains("\"ok\":true"), "envelope={envelope}");
+    assert_eq!(
+        host.host_calls.lock().unwrap().as_slice(),
+        [("server/status".to_string(), "{}".to_string())]
+    );
+    unsafe { abi::release_host_ctx(table.ctx) };
+
+    // Without any host.* capability: permission denied, nothing forwarded.
+    let ctx_no_cap = Arc::new(NativeHostCtx {
+        host: host.clone(),
+        capabilities: vec![],
+    });
+    let table2 = abi::host_table_for(ctx_no_cap);
+    let mut size2: u32 = 512;
+    let res2 = unsafe {
+        (table2.call_host)(
+            table2.ctx,
+            method.as_ptr(),
+            params.as_ptr(),
+            buf.as_mut_ptr(),
+            &mut size2,
+        )
+    };
+    assert_eq!(res2, mpl_result_t::MPL_ERR_PERMISSION);
+    assert_eq!(host.host_calls.lock().unwrap().len(), 1);
+    unsafe { abi::release_host_ctx(table2.ctx) };
+}
+
+#[test]
+fn host_event_subscription_shims_gate_on_capability() {
+    let host = Arc::new(DirectHost::default());
+
+    let ctx = Arc::new(NativeHostCtx {
+        host: host.clone(),
+        capabilities: vec![micyou_plugin::capabilities::HOST_EVENTS.to_string()],
+    });
+    let table = abi::host_table_for(ctx);
+    let filter = std::ffi::CString::new("audio").unwrap();
+    let res = unsafe { (table.subscribe_host_events)(table.ctx, filter.as_ptr()) };
+    assert_eq!(res, mpl_result_t::MPL_OK);
+    assert_eq!(host.event_subs.lock().unwrap().as_slice(), ["audio"]);
+    let res = unsafe { (table.unsubscribe_host_events)(table.ctx, filter.as_ptr()) };
+    assert_eq!(res, mpl_result_t::MPL_OK);
+    assert!(host.event_subs.lock().unwrap().is_empty());
+    unsafe { abi::release_host_ctx(table.ctx) };
+
+    let ctx_no_cap = Arc::new(NativeHostCtx {
+        host: host.clone(),
+        capabilities: vec![],
+    });
+    let table2 = abi::host_table_for(ctx_no_cap);
+    let res2 = unsafe { (table2.subscribe_host_events)(table2.ctx, filter.as_ptr()) };
+    assert_eq!(res2, mpl_result_t::MPL_ERR_PERMISSION);
     unsafe { abi::release_host_ctx(table2.ctx) };
 }

@@ -101,15 +101,21 @@
 
 ## 三、实施阶段（每阶段推送后由 GitHub Actions 验证）
 
-| 阶段 | 内容 | 验证 |
+| 阶段 | 内容 | 状态 |
 |---|---|---|
-| **A** | 仓库骨架：workspace、全部 crate 存根、LICENSE(GPLv3+插件例外)、CI(fmt/clippy/test × 3 OS)、Cargo.lock | CI 绿 |
-| **B** | 移植三个无 Tauri 依赖 crate：protocol → audio → plugin（含原有单测） | CI 绿，测试通过 |
-| **C** | 新建 `micyou-transport`：jitter/opus/audio_stream/stats/tcp/udp/mdns/adb/web + 解耦 trait + 单测 | CI 绿 |
-| **D** | 新建 `micyou-core`：config/mode_lock/平台设备/audio_output/sound_player/AudioPipeline/PluginHost(无头)/ServerCore + 单测 | CI 绿 |
-| **E** | `micyou-api` + `micyou-rpc` + `micyou-daemon` + `libmicyou` 门面：契约类型、路由器、stdio/ws 传输、守护进程 | CI 绿 + 协议往返单测 |
-| **F** | `micyou-client` SDK + HostApi v2（call_host/事件订阅）+ native-soundpad 示例移植 | CI 绿 + ABI 测试 |
-| **G** | 文档：architecture.md / rpc-api.md / plugin-api-v2.md / 迁移指南；README | CI 绿 |
+| **A** | 仓库骨架：workspace、全部 crate 存根、LICENSE(GPLv3+插件例外)、CI(fmt/clippy/test × 3 OS)、Cargo.lock | ✅ CI 三平台绿（bba9c18） |
+| **B** | 移植三个无 Tauri 依赖 crate：protocol → audio → plugin（含原有单测） | ✅ 编译通过（测试路径修复后随 C 验证） |
+| **C** | 新建 `micyou-transport`：jitter/stream/stats/tcp/udp/mdns/adb/web + `TransportEvents` 解耦 trait + 单测 | ✅ 编译+测试通过 |
+| **D** | 新建 `micyou-core`：config/mode_lock/平台设备/audio_output/sound/AudioPipeline/PluginHost(无头)/ServerCore/日志 + 单测 | ✅ 编译通过 |
+| **E** | `micyou-api` + `micyou-rpc` + `micyou-daemon` + `libmicyou` 门面：契约类型、路由器、stdio/ws/local 传输、守护进程、CI 冒烟测试 | ✅ 已实现，CI 验证中 |
+| **F** | `micyou-client` SDK + HostApi v3（call_host 桥/事件订阅/能力分级）+ ABI v3 测试 | ✅ 已实现，CI 验证中 |
+| **G** | 文档：architecture.md / rpc-api.md / plugin-api-v3.md；README 快速开始 | ✅ 已交付 |
+
+后续（下一里程碑）：
+- 示例插件升级演示 call_host/host:event（当前示例保持 apiVersion 1 以持续验证向后兼容）
+- WebSocket 传输鉴权（--ws-token + hello 校验）
+- 原仓库 Tauri 前端改造为 sidecar 客户端（属前端仓库工作）
+- CLI/TUI 前端基于 micyou-client 重写（可选，验证 SDK 人体工学）
 
 ### CI 约束（沙盒纪律）
 

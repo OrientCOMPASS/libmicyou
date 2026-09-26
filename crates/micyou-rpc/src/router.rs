@@ -298,8 +298,10 @@ impl RpcService {
             }
             m::PLUGINS_WINDOW_OPEN => {
                 let p: m::PluginPanelParams = parse_params(params)?;
-                b.plugins_window_open(p)
-                    .map_err(|e| RpcError::new(codes::UI_UNAVAILABLE, e))
+                match b.plugins_window_open(p) {
+                    Ok(ack) => to_value(ack),
+                    Err(message) => Err(RpcError::new(codes::UI_UNAVAILABLE, message)),
+                }
             }
 
             // ── mode ───────────────────────────────────────────────────
