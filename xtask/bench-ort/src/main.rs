@@ -182,4 +182,9 @@ fn main() {
         std::fs::write(&path, serde_json::to_string_pretty(&out).unwrap()).unwrap();
         println!("wrote {path}");
     }
+
+    // ONNX Runtime (load-dynamic) segfaults during process teardown on some
+    // runners (static destructors racing the dylib unload) *after* all work
+    // is done. Exit directly — results are fully written at this point.
+    std::process::exit(0);
 }
