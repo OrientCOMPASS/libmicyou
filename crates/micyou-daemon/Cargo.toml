@@ -4,7 +4,6 @@ description = "MicYou headless backend daemon: serves the JSON-RPC API over stdi
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
-license.workspace = true
 repository.workspace = true
 
 [[bin]]

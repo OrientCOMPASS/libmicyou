@@ -1,12 +1,4 @@
-/*
- * libmicyou - headless, frontend-decoupled backend for MicYou.
- * Derived from MicYou <https://github.com/LanRhyme/MicYou>.
- *
- * Copyright (C) 2026 LanRhyme (original MicYou)
- * Copyright (C) 2026 OrientCOMPASS (libmicyou refactor)
- *
- * GPL-3.0-or-later with the MicYou Plugin Exception. See LICENSE.
- */
+/* libmicyou - headless, frontend-decoupled backend for MicYou. */
 
 //! Server lifecycle state machine.
 //!

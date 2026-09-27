@@ -1,12 +1,4 @@
-/*
- * libmicyou — micyou-gui frontend (original MicYou Vue UI).
- * Derived from MicYou <https://github.com/LanRhyme/MicYou> commands/system.rs.
- *
- * Copyright (C) 2026 LanRhyme (original MicYou accent color detection)
- * Copyright (C) 2026 OrientCOMPASS (libmicyou port)
- *
- * GPL-3.0-or-later with the MicYou Plugin Exception. See LICENSE (repo root).
- */
+/* libmicyou — micyou-gui frontend (original MicYou Vue UI). */
 
 //! Desktop accent color detection (theme seed follow-system). Shell-local:
 //! reads the OS setting directly, no backend involvement.

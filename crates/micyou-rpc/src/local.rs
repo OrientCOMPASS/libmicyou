@@ -1,10 +1,4 @@
-/*
- * libmicyou — headless, frontend-decoupled backend for MicYou.
- *
- * Copyright (C) 2026 OrientCOMPASS (libmicyou refactor)
- *
- * GPL-3.0-or-later with the MicYou Plugin Exception. See LICENSE.
- */
+/* libmicyou — headless, frontend-decoupled backend for MicYou. */
 
 //! In-process transport: a duplex pair of unbounded channels speaking the
 //! same newline-delimited JSON-RPC as the other transports. Embedded Rust

@@ -4,8 +4,8 @@
 （`tauri-app/`）整体移植到 libmicyou 的解耦后端上：
 
 - **Vue 源码零改动**：`src/` 原样拷贝自上游（Vue 3 + Vite + Tailwind +
-  vue-i18n + reka-ui），保留上游版权头与 GPL-3.0-or-later WITH
-  MicYou-Plugin-Exception 许可。
+  vue-i18n + reka-ui）。应上游版权持有人授权，版权/许可头已移除；
+  仓库整体暂未设定许可证（实验性）。
 - **所有业务逻辑在 `micyou-daemon` sidecar**：壳（`src-tauri/`）spawn
   `micyou-daemon --stdio --no-mode-lock`，通过换行分隔 JSON-RPC 通信。
 - 上游壳内嵌的服务器/DSP/插件宿主实现全部由 libmicyou 后端契约

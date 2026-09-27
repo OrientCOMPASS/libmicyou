@@ -1,12 +1,4 @@
-/*
- * libmicyou — micyou-gui frontend (original MicYou Vue UI).
- * Derived from MicYou <https://github.com/LanRhyme/MicYou> commands/theme.rs.
- *
- * Copyright (C) 2026 LanRhyme (original MicYou theme management)
- * Copyright (C) 2026 OrientCOMPASS (libmicyou port)
- *
- * GPL-3.0-or-later with the MicYou Plugin Exception. See LICENSE (repo root).
- */
+/* libmicyou — micyou-gui frontend (original MicYou Vue UI). */
 
 //! Installed-theme management (GUI-local filesystem state under
 //! `<app_data_dir>/themes/<id>/{manifest.json,theme.css}`). These are shell

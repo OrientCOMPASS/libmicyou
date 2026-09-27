@@ -21,6 +21,7 @@ MicYou 桌面端后端的独立重构：前后端分离、与 Tauri 解耦的无
 | crate | 职责 |
 |---|---|
 | [`micyou-protocol`](crates/micyou-protocol) | 与手机端的 protobuf 线路协议（TCP `MicY` / UDP `MicU`） |
+| [`micyou-infer`](crates/micyou-infer) | 零依赖纯 Rust 推理 VM：执行静态编译的 PureVox6/AEC7 模型（无 ONNX Runtime） |
 | [`micyou-audio`](crates/micyou-audio) | cpal 输出引擎、DSP 链（AEC/NS/Dereverb/EQ/AGC/VAD）、环回采集 |
 | [`micyou-plugin`](crates/micyou-plugin) | 插件框架：native cdylib + WASM 双运行时、消息总线、DSP 节点 |
 | [`micyou-transport`](crates/micyou-transport) | 网络模块：TCP/UDP/Web(TLS) 服务器、mDNS、ADB、抖动缓冲 + FEC、Opus |
@@ -78,6 +79,7 @@ Tauri 参考前端的控制器逻辑与 GUI 解耦，可在 CI 无显示环境�
 
 - [PLAN.md](./PLAN.md) — 重构路线图与现状分析
 - [docs/architecture.md](./docs/architecture.md) — 模块拓扑、数据流、生命周期与并发设计
+- [docs/pure-rust-inference.md](./docs/pure-rust-inference.md) — PureVox6/AEC7 纯 Rust 推理移植：编译管线、验证矩阵与性能对比
 - [docs/rpc-api.md](./docs/rpc-api.md) — JSON-RPC 契约全表（方法/事件/错误码/传输）
 - [docs/plugin-api-v3.md](./docs/plugin-api-v3.md) — 插件解放：`call_host` 桥与事件订阅
 - [docs/migration.md](./docs/migration.md) — 原 Tauri/CLI/TUI 前端迁移指南（事件与方法对照表）
@@ -144,6 +146,11 @@ git config user.email "orientcompass@users.noreply.github.com"
 
 ## 许可
 
-GPL-3.0-or-later，附 MicYou Plugin Exception (Version 1.0)，详见 [LICENSE](./LICENSE)。
-本项目派生自 [LanRhyme/MicYou](https://github.com/LanRhyme/MicYou)（Copyright (C) 2026 LanRhyme），
-重构部分 Copyright (C) 2026 OrientCOMPASS。
+**实验性仓库,代码暂未设定许可证。** 应上游版权持有人授权,派生代码的
+版权与 GPL 许可头已全部移除,根目录不再提供 LICENSE 文件。
+
+例外:随附的 PureVox6 / AEC7 模型(`crates/micyou-core/resources/*.onnx`
+及其编译产物 `crates/micyou-audio/src/assets/*.mcy`)为第三方作品,
+仍按 **MIT License (a2heng)** 分发,声明见
+[LICENSE-PureVox.txt](./crates/micyou-core/resources/LICENSE-PureVox.txt) 与
+[LICENSE-AEC7.txt](./crates/micyou-core/resources/LICENSE-AEC7.txt)。

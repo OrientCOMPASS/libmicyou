@@ -4,7 +4,6 @@ description = "MicYou backend client SDK: typed JSON-RPC methods and event strea
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
-license.workspace = true
 repository.workspace = true
 
 [dependencies]

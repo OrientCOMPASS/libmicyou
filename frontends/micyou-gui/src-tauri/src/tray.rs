@@ -1,12 +1,4 @@
-/*
- * libmicyou — micyou-gui frontend (original MicYou Vue UI).
- * Derived from MicYou <https://github.com/LanRhyme/MicYou> tray.rs.
- *
- * Copyright (C) 2026 LanRhyme (original MicYou tray implementation)
- * Copyright (C) 2026 OrientCOMPASS (libmicyou port)
- *
- * GPL-3.0-or-later with the MicYou Plugin Exception. See LICENSE (repo root).
- */
+/* libmicyou — micyou-gui frontend (original MicYou Vue UI). */
 
 //! System tray: localized menu pushed from the webview (`set_tray_strings` /
 //! `set_tray_state`), click events re-emitted as `tray-action` with the stock

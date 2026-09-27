@@ -3,7 +3,6 @@ name = "micyou-gui"
 description = "Original MicYou desktop GUI (Vue 3 + Tailwind) ported onto the libmicyou daemon backend"
 version = "2.0.3"
 edition = "2021"
-license = "GPL-3.0-or-later"
 publish = false
 
 # Standalone workspace (mirrors a real third-party frontend consuming the

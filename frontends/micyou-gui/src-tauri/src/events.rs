@@ -1,12 +1,4 @@
-/*
- * libmicyou — micyou-gui frontend (original MicYou Vue UI).
- * Derived from MicYou <https://github.com/LanRhyme/MicYou> events.rs.
- *
- * Copyright (C) 2026 LanRhyme (original MicYou event semantics)
- * Copyright (C) 2026 OrientCOMPASS (libmicyou port)
- *
- * GPL-3.0-or-later with the MicYou Plugin Exception. See LICENSE (repo root).
- */
+/* libmicyou — micyou-gui frontend (original MicYou Vue UI). */
 
 //! Event bridge: daemon `ServerEvent`s → original Tauri event names.
 //!

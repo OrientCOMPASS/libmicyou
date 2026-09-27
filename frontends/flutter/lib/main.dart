@@ -1,8 +1,4 @@
 // libmicyou — Flutter (Material 3) reference frontend.
-//
-// Copyright (C) 2026 OrientCOMPASS
-// GPL-3.0-or-later with the MicYou Plugin Exception.
-//
 // Connects to micyou-daemon over WebSocket JSON-RPC (ws://host/rpc).
 // Material 3 design language: NavigationRail, seed-generated color scheme,
 // Material cards/switches/sliders, CustomPaint spectrum — the Flutter

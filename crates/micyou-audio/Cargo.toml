@@ -4,13 +4,12 @@ description = "MicYou audio engine: cpal output, resampling, DSP chain (AEC/NS/d
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
-license.workspace = true
 repository.workspace = true
 
 [features]
 default = ["dsp"]
-dsp = ["dep:nnnoiseless", "dep:ort", "dep:rustfft", "dep:ndarray"]
-noise-suppression = ["dsp"]
+dsp = ["dep:nnnoiseless", "dep:rustfft"]
+noise-suppression = ["dsp", "dep:micyou-infer"]
 
 [dependencies]
 micyou-protocol.workspace = true
@@ -23,9 +22,11 @@ opus-decoder.workspace = true
 
 # DSP dependencies (optional)
 nnnoiseless = { workspace = true, optional = true }
-ort = { workspace = true, optional = true }
+micyou-infer = { workspace = true, optional = true }
 rustfft = { workspace = true, optional = true }
-ndarray = { workspace = true, optional = true }
 
 [target.'cfg(windows)'.dependencies]
 wasapi.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true

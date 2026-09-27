@@ -1,10 +1,4 @@
-/*
- * libmicyou — Tauri 2 reference frontend.
- *
- * Copyright (C) 2026 OrientCOMPASS
- *
- * GPL-3.0-or-later with the MicYou Plugin Exception. See LICENSE (repo root).
- */
+/* libmicyou — Tauri 2 reference frontend. */
 
 // Hide the console window on Windows in release builds.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]

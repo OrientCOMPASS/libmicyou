@@ -1,19 +1,11 @@
 /*
  * libmicyou — micyou-gui frontend.
- * Derived from MicYou <https://github.com/LanRhyme/MicYou> generate-licenses.js.
- *
- * Copyright (C) 2026 LanRhyme (original license report generator)
- * Copyright (C) 2026 OrientCOMPASS (lightweight libmicyou variant)
- *
- * GPL-3.0-or-later with the MicYou Plugin Exception. See LICENSE (repo root).
- *
  * Lightweight replacement for the upstream generator: the original shells out
  * to `cargo-about` (a heavyweight Rust toolchain component) to render the full
  * dependency report. This variant produces the same output file
  * (src/generated/third-party-licenses.html, imported `?raw` by
  * LicensesDialog.vue) from package-lock.json alone, plus a pointer section for
  * the Rust side, whose crates are listed in the repository with their
- * licenses (GPL-3.0-or-later with the MicYou Plugin Exception).
  */
 
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
@@ -129,7 +121,7 @@ function generateBackendReport() {
       ([name, description]) => `<tr>
         <td><a href="https://github.com/OrientCOMPASS/libmicyou/tree/main/crates/${name}" target="_blank" rel="noreferrer">${escapeHtml(name)}</a></td>
         <td>${escapeHtml(description)}</td>
-        <td>GPL-3.0-or-later WITH MicYou-Plugin-Exception</td>
+        <td>License undecided (experimental)</td>
       </tr>`,
     )
     .join('\n');
@@ -137,10 +129,10 @@ function generateBackendReport() {
   <div class="license-summary">
     <h3>Backend (libmicyou)</h3>
     <p>This GUI talks to the <code>micyou-daemon</code> sidecar built from the
-    libmicyou workspace. Those crates are licensed GPL-3.0-or-later with the
-    MicYou Plugin Exception; their Rust dependency licenses are listed in the
+    libmicyou workspace. The workspace itself is experimental with its license
+    undecided; the third-party Rust dependency licenses are listed in the
     <a href="https://github.com/OrientCOMPASS/libmicyou" target="_blank" rel="noreferrer">libmicyou
-    repository</a> (see <code>Cargo.lock</code> and per-crate headers).</p>
+    repository</a> (see <code>Cargo.lock</code>).</p>
   </div>
   <table class="license-table">
     <thead><tr><th>Crate</th><th>Role</th><th>License</th></tr></thead>

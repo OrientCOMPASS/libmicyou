@@ -4,7 +4,6 @@ description = "libmicyou facade: embeddable Backend builder re-exporting the Mic
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
-license.workspace = true
 repository.workspace = true
 
 [dependencies]

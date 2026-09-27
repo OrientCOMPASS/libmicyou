@@ -1,0 +1,132 @@
+name: Native Inference
+
+# Verification + performance pipeline for the pure-Rust inference port
+# (ort/ONNX Runtime removal). Runs on the feature branch while in flight and
+# on every PR touching the port afterwards.
+#
+#   parity job: numpy reference interpreter ↔ onnxruntime (streaming +
+#               per-node), compiled blob freshness, golden fixture freshness
+#   bench job:  native VM (PR tree) vs ort (main tree) on the same runner
+
+on:
+  push:
+    branches: [feat/pure-rust-inference]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  parity:
+    name: numpy ↔ ORT parity & artifact freshness
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install python deps
+        run: pip install numpy onnx onnxruntime
+
+      - name: Interpreter ↔ onnxruntime (32 streaming frames, all outputs)
+        working-directory: tools/onnx-port
+        run: python3 parity_ort.py --frames 32
+
+      - name: Interpreter ↔ onnxruntime (every intermediate node)
+        working-directory: tools/onnx-port
+        run: python3 parity_ort.py --frames 2 --all-nodes
+
+      - name: Compiled blob ↔ interpreter (numpy replay, 16 frames)
+        working-directory: tools/onnx-port
+        run: python3 replay_check.py --frames 16
+
+      - name: Blob freshness (compiled assets must match the ONNX sources)
+        run: python3 tools/onnx-port/compile_models.py --check
+
+      - name: Golden fixture freshness (op-level + streaming)
+        run: python3 tools/onnx-port/gen_golden.py --check
+
+      - name: Golden fixture freshness (time-domain DSP chain)
+        run: python3 tools/onnx-port/gen_td_golden.py --check
+
+  bench:
+    name: perf — native VM vs ort baseline (main)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: head
+
+      - name: Fetch ort baseline tree (main)
+        run: |
+          git clone --depth 1 --branch main \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
+            base
+
+      # Stage the harness BEFORE rust-cache: the cache action walks (and may
+      # pre-create) the listed workspace dirs, and a pre-existing destination
+      # would make `cp -r` nest the crate one level deeper — cargo would then
+      # silently resolve the BASE workspace from the crate-less cwd.
+      - name: Stage ort bench harness into the baseline tree
+        run: |
+          rm -rf base/xtask
+          mkdir -p base/xtask
+          cp -r head/xtask/bench-ort base/xtask/bench-ort
+          test -f base/xtask/bench-ort/Cargo.toml
+          test -f base/xtask/bench-ort/src/main.rs
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            head/xtask/bench-native -> target-bench-native
+            base/xtask/bench-ort -> target-bench-ort
+          cache-on-failure: true
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libasound2-dev
+
+      - name: Download ONNX Runtime (baseline only)
+        run: |
+          curl -sSL -o ort.tgz \
+            https://github.com/microsoft/onnxruntime/releases/download/v1.19.2/onnxruntime-linux-x64-1.19.2.tgz
+          tar xzf ort.tgz
+          echo "ORT_LIB=$PWD/onnxruntime-linux-x64-1.19.2/lib/libonnxruntime.so" >> "$GITHUB_ENV"
+
+      - name: Run baseline bench (ort, main tree)
+        working-directory: base/xtask/bench-ort
+        run: |
+          # fail loudly if cargo resolves the wrong workspace (no lockfile needed)
+          test "$(cargo locate-project --workspace --message-format plain)" = "$PWD/Cargo.toml"
+          MICYOU_ORT_LIB="$ORT_LIB" \
+          MICYOU_MODEL_DIR="$GITHUB_WORKSPACE/base/crates/micyou-core/resources" \
+            cargo run --release -- --frames 3000 --json "$GITHUB_WORKSPACE/ort.json"
+
+      - name: Run native bench (PR tree)
+        working-directory: head/xtask/bench-native
+        run: |
+          test "$(cargo locate-project --workspace --message-format plain)" = "$PWD/Cargo.toml"
+          cargo run --release -- --frames 3000 --json "$GITHUB_WORKSPACE/native.json"
+
+      - name: Compare → job summary
+        run: python3 head/xtask/bench_compare.py ort.json native.json "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench-results
+          path: |
+            ort.json
+            native.json

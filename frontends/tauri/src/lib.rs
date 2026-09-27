@@ -1,10 +1,4 @@
-/*
- * libmicyou — Tauri 2 reference frontend.
- *
- * Copyright (C) 2026 OrientCOMPASS
- *
- * GPL-3.0-or-later with the MicYou Plugin Exception. See LICENSE (repo root).
- */
+/* libmicyou — Tauri 2 reference frontend. */
 
 //! Tauri shell: thin commands over the backend session + event forwarding to
 //! the webview. All business logic lives in the daemon; this layer only

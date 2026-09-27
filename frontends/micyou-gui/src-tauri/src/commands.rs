@@ -1,12 +1,6 @@
 /*
  * libmicyou — micyou-gui frontend (original MicYou Vue UI).
- * Derived from MicYou <https://github.com/LanRhyme/MicYou>
  * commands/{system,about,plugins}.rs.
- *
- * Copyright (C) 2026 LanRhyme (original MicYou command semantics)
- * Copyright (C) 2026 OrientCOMPASS (libmicyou port)
- *
- * GPL-3.0-or-later with the MicYou Plugin Exception. See LICENSE (repo root).
  */
 
 //! Shell-local Tauri commands: everything that is a GUI concern (windows,

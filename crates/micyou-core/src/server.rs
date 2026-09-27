@@ -1,16 +1,4 @@
-/*
- * libmicyou — headless, frontend-decoupled backend for MicYou.
- * Derived from MicYou <https://github.com/LanRhyme/MicYou>.
- *
- * Copyright (C) 2026 LanRhyme (original MicYou)
- * Copyright (C) 2026 OrientCOMPASS (libmicyou refactor)
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version, with the MicYou Plugin Exception.
- * See LICENSE for details.
- */
+/* libmicyou — headless, frontend-decoupled backend for MicYou. */
 
 //! Server core: owns the shared runtime state and the start/stop
 //! transactions for the whole backend.
@@ -528,24 +516,11 @@ impl ServerCore {
             .map(|s| (s.output_buffer_ms as usize).clamp(100, 1200))
             .unwrap_or(800);
 
-        // Locate bundled resources (ONNX models + ALSA config) once for the
-        // whole startup, then load the ONNX Runtime shared library. The
-        // official Microsoft build uses runtime CPUID dispatch for AVX2/SSE
-        // kernels, so it works on CPUs without AVX2.
+        // Locate bundled resources (ALSA config) once for the whole startup.
+        // AI noise suppression / AEC models are compiled into the binary
+        // (pure-Rust inference VM), so no runtime library or model loading
+        // is needed here anymore.
         let resource_root = crate::resources::find_resource_dir(resource_dir.as_deref());
-        if let Some(ort_path) = crate::resources::find_ort_runtime(resource_root.as_deref()) {
-            if let Err(e) = micyou_audio::init_ort_runtime(&ort_path) {
-                log::error!(
-                    "Failed to load ONNX Runtime from {}: {e}",
-                    ort_path.display()
-                );
-            }
-        } else {
-            log::warn!(
-                "ONNX Runtime library ({}) not found; AI noise suppression will be unavailable",
-                crate::resources::ort_runtime_filename()
-            );
-        }
 
         // Pre-open the persistent output device OUTSIDE the pipeline's
         // startup budget: first open can be slow (Linux PipeWire virtual
