@@ -2,8 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # feat/pure-rust-inference: run the full matrix on the port branch while
+    # it is in flight (the working token has no pull_requests scope, so CI
+    # cannot rely on the pull_request trigger). Drop the branch entry when
+    # the port lands.
+    branches: [main, feat/pure-rust-inference]
   pull_request:
+  # Manual re-runs of the full matrix (e.g. flaky runner triage).
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
