@@ -73,13 +73,25 @@ jobs:
             "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" \
             base
 
+      # Stage the harness BEFORE rust-cache: the cache action walks (and may
+      # pre-create) the listed workspace dirs, and a pre-existing destination
+      # would make `cp -r` nest the crate one level deeper — cargo would then
+      # silently resolve the BASE workspace from the crate-less cwd.
+      - name: Stage ort bench harness into the baseline tree
+        run: |
+          rm -rf base/xtask
+          mkdir -p base/xtask
+          cp -r head/xtask/bench-ort base/xtask/bench-ort
+          test -f base/xtask/bench-ort/Cargo.toml
+          test -f base/xtask/bench-ort/src/main.rs
+
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
-            head/xtask/bench-native -> target
-            base/xtask/bench-ort -> target
+            head/xtask/bench-native -> target-bench-native
+            base/xtask/bench-ort -> target-bench-ort
           cache-on-failure: true
 
       - name: Install Linux system dependencies
@@ -94,21 +106,19 @@ jobs:
           tar xzf ort.tgz
           echo "ORT_LIB=$PWD/onnxruntime-linux-x64-1.19.2/lib/libonnxruntime.so" >> "$GITHUB_ENV"
 
-      - name: Stage ort bench harness into the baseline tree
-        run: |
-          mkdir -p base/xtask
-          cp -r head/xtask/bench-ort base/xtask/bench-ort
-
       - name: Run baseline bench (ort, main tree)
         working-directory: base/xtask/bench-ort
         run: |
+          cargo pkgid | grep -q bench-ort   # fail loudly if cargo resolves the wrong workspace
           MICYOU_ORT_LIB="$ORT_LIB" \
           MICYOU_MODEL_DIR="$GITHUB_WORKSPACE/base/crates/micyou-core/resources" \
             cargo run --release -- --frames 3000 --json "$GITHUB_WORKSPACE/ort.json"
 
       - name: Run native bench (PR tree)
         working-directory: head/xtask/bench-native
-        run: cargo run --release -- --frames 3000 --json "$GITHUB_WORKSPACE/native.json"
+        run: |
+          cargo pkgid | grep -q bench-native
+          cargo run --release -- --frames 3000 --json "$GITHUB_WORKSPACE/native.json"
 
       - name: Compare → job summary
         run: python3 head/xtask/bench_compare.py ort.json native.json "$GITHUB_STEP_SUMMARY"
