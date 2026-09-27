@@ -57,7 +57,7 @@
 | crate | 职责 | 来源 |
 |---|---|---|
 | `micyou-protocol` | 与手机端的 protobuf 线路协议、魔数、端口常量（**字节级兼容，不可破坏**） | 移植 |
-| `micyou-audio` | cpal 输出引擎、重采样、DSP 链（AEC→NS→Dereverb→EQ→AGC→VAD，ONNX/RNNoise）、环回采集、音效混音 | 移植 |
+| `micyou-audio` | cpal 输出引擎、重采样、DSP 链（AEC→NS→Dereverb→EQ→AGC→VAD，纯 Rust 推理 VM/RNNoise）、环回采集、音效混音 | 移植 |
 | `micyou-plugin` | 插件框架：清单/能力、native(cdylib C-ABI) + WASM(wasmi) 运行时、消息总线、DSP 节点注册、跨设备同步协议；**HostApi v2** | 移植+扩展 |
 | `micyou-transport` | 网络模块：TCP 控制面(8554)/UDP 音频面(port+1)/Web 模式(axum TLS WS)/mDNS 广播/ADB 转发；抖动缓冲+FEC；Opus 解码；会话状态与网络统计 | 从 src-tauri 抽取重构 |
 | `micyou-core` | 编排模块：`ServerCore`（生命周期状态机、启动/停止事务）、音频管线（原 start_server_inner 内联线程抽为 `AudioPipeline`）、共享配置(settings/server/ui/theme.json)、平台虚拟设备、插件宿主接线（无头热键、UI 请求委托）、守护进程日志 | 重构 |
@@ -129,7 +129,7 @@
 |---|---|
 | 无本地编译反馈，移植代码可能编译失败 | 尽量保持原代码结构（已验证可编译）；分小批推送；CI 快速失败后按日志修复 |
 | 依赖版本漂移（2026 年 crates.io） | 沿用原 Cargo.toml 的精确版本约束 + 提交 Cargo.lock |
-| `ort`/ONNX 构建过重 | 原项目已用 `load-dynamic`（运行时加载 so/dll），CI 无需 ONNX 构建 ✅ |
+| ~~`ort`/ONNX 构建过重~~ | **已移除**：PureVox6/AEC7 静态编译为零依赖纯 Rust VM（`micyou-infer`），二进制自含模型，无需 onnxruntime 动态库（见 docs/pure-rust-inference.md）✅ |
 | opus-decoder 依赖 git patch | workspace 根部保留 `[patch.crates-io]` Rusopus |
 | GPL 传染 | 新仓库保持 GPL-3.0-or-later + MicYou Plugin Exception，文件头保留原版权并追加重构声明 |
 | CI macOS/Windows 平台代码路径无法本地验证 | 平台特定代码尽量照搬原实现；矩阵覆盖三平台 |

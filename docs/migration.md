@@ -115,9 +115,12 @@ daemon 在启动时即预热虚拟麦克风设备（等效原 GUI 的启动即�
   `host.call`/`host.admin`/`host.events` 的插件获得完整后端访问
   （见 [plugin-api-v3.md](./plugin-api-v3.md)）。
 
-## 6. 资源与 ONNX
+## 6. 资源与模型
 
-- `onnxruntime.{dll,dylib,so}` 与模型（`purevox6.onnx`、`aec7_ep0185.onnx`）
-  随 daemon 打包：放 sidecar 同级的 `resources/`（自动发现），或用
-  `--resources <dir>` / `$MICYOU_RESOURCE_DIR` 显式指定。
-- Linux PipeWire 的 ALSA 配置模板同样位于 resources 目录。
+- AI 降噪（PureVox6）与回声消除（AEC7）模型已静态编译进二进制
+  （纯 Rust 推理 VM，见 [pure-rust-inference.md](./pure-rust-inference.md)），
+  不再需要 `onnxruntime.{dll,dylib,so}`，也不存在模型文件缺失的降级路径。
+- resources 目录只保留 Linux PipeWire 的 ALSA 配置模板：放 sidecar 同级的
+  `resources/`（自动发现），或用 `--resources <dir>` / `$MICYOU_RESOURCE_DIR`
+  显式指定。旧版打包树中残留的 `.onnx` 文件仍可被识别（兼容 marker），
+  但运行时不再读取。
