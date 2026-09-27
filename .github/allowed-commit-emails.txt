@@ -1,0 +1,26 @@
+# Allowed git author/committer email addresses for this repository.
+# Enforced by the "Commit Identity Audit" workflow (.github/workflows/commit-audit.yml)
+# on every push to main and every pull request. Matching is case-insensitive.
+#
+# WHY THIS EXISTS:
+#   A fabricated identity "OrientCOMPASS-bot <bot@users.noreply.github.com>" was once
+#   used in a commit. GitHub attributes commits by email, and <login>@users.noreply.github.com
+#   maps to the REAL account holding that login — so the commit was credited to the
+#   unrelated external user https://github.com/bot and polluted the contributor list.
+#   Fixing it required rewriting published history and force-pushing.
+#
+# RULE:
+#   Never invent an email. Use exactly one of the identities below.
+#   To add a new legitimate identity, update this file in the same change that uses it.
+
+# Repository owner — legacy noreply form (used by all existing history)
+orientcompass@users.noreply.github.com
+
+# Repository owner — modern noreply form (account id 316423573)
+316423573+orientcompass@users.noreply.github.com
+
+# GitHub Actions automation (commits/merges made with the built-in GITHUB_TOKEN)
+41898282+github-actions[bot]@users.noreply.github.com
+
+# GitHub web UI operations (e.g. merging a PR in the browser); attributes to nobody
+noreply@github.com

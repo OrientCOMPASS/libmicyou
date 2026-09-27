@@ -1,0 +1,32 @@
+name: Commit Identity Audit
+
+# Guards against fabricated git identities: a made-up email such as
+# bot@users.noreply.github.com is attributed by GitHub to the real, unrelated
+# account holding that login, polluting the contributor list. Every commit
+# author/committer email must appear in .github/allowed-commit-emails.txt.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: audit commit identities
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history, so the audit covers every reachable commit
+
+      - name: Verify author/committer emails against allowlist
+        run: bash .github/scripts/commit-audit.sh HEAD

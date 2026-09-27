@@ -127,6 +127,21 @@ cargo fmt --all --check    # 格式检查
 
 CI（GitHub Actions）在 ubuntu / windows / macos 三平台执行 build + test。
 
+### 提交身份（必读）
+
+GitHub 按邮箱归属提交：`<login>@users.noreply.github.com` 会记到**真实持有该 login 的账号**头上。
+曾因杜撰 `bot@users.noreply.github.com` 把提交误归属给无关外部账号，只能改写历史修复。
+因此本仓库所有提交的 author/committer 必须使用
+[`OrientCOMPASS <orientcompass@users.noreply.github.com>`](https://github.com/OrientCOMPASS)
+或 [.github/allowed-commit-emails.txt](./.github/allowed-commit-emails.txt) 中列出的身份；
+「Commit Identity Audit」工作流会在每次 push / PR 时全量校验，违规即红。
+新身份需在同一变更中先加入白名单。
+
+```bash
+git config user.name  "OrientCOMPASS"
+git config user.email "orientcompass@users.noreply.github.com"
+```
+
 ## 许可
 
 GPL-3.0-or-later，附 MicYou Plugin Exception (Version 1.0)，详见 [LICENSE](./LICENSE)。
