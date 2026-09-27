@@ -3,3 +3,5 @@
 *.pdb
 .DS_Store
 xtask/*/target
+__pycache__/
+*.pyc
