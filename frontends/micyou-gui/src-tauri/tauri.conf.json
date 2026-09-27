@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "MicYou GUI",
+  "version": "2.0.3",
+  "identifier": "dev.libmicyou.micyou-gui",
+  "build": {
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "macOSPrivateApi": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "MicYou",
+        "width": 800,
+        "height": 600,
+        "decorations": false,
+        "resizable": false,
+        "transparent": true,
+        "shadow": false,
+        "windowEffects": {
+          "effects": ["acrylic", "blur"]
+        }
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": false,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

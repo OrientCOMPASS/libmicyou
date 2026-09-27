@@ -1,0 +1,53 @@
+{
+  "name": "micyou",
+  "private": true,
+  "version": "2.0.3",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "scripts": {
+    "licenses": "node generate-licenses.js",
+    "clean-bundles": "node clean-bundles.js",
+    "dev": "npm run licenses && vite",
+    "build": "npm run licenses && vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "prepare-sidecars": "node prepare-sidecars.js",
+    "prepare-sidecars:dev": "node prepare-sidecars.js --debug",
+    "tauri": "node run-tauri.js",
+    "sync-version": "node sync-version.js"
+  },
+  "dependencies": {
+    "@codemirror/lang-css": "^6.3.1",
+    "@codemirror/theme-one-dark": "^6.1.3",
+    "@lucide/vue": "^1.17.0",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-autostart": "^2",
+    "@tauri-apps/plugin-dialog": "^2.7.2",
+    "@tauri-apps/plugin-notification": "^2.3.3",
+    "@tauri-apps/plugin-opener": "^2.5.4",
+    "@vueuse/core": "^14.3.0",
+    "animejs": "^3.2.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "codemirror": "^6.0.2",
+    "qrcode": "^1.5.4",
+    "reka-ui": "^2.9.9",
+    "tailwind-merge": "^3.6.0",
+    "tailwindcss-animate": "^1.0.7",
+    "vue": "^3.5.13",
+    "vue-codemirror": "^6.1.1",
+    "vue-i18n": "^9.14.5"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "@types/animejs": "^3.1.13",
+    "@types/node": "^25.9.2",
+    "@types/qrcode": "^1.5.6",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^3.4.19",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.3",
+    "vue-tsc": "^2.1.10"
+  }
+}

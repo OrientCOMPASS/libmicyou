@@ -1,0 +1,47 @@
+[package]
+name = "micyou-gui"
+description = "Original MicYou desktop GUI (Vue 3 + Tailwind) ported onto the libmicyou daemon backend"
+version = "2.0.3"
+edition = "2021"
+license = "GPL-3.0-or-later"
+publish = false
+
+# Standalone workspace (mirrors a real third-party frontend consuming the
+# libmicyou backend crates through path/git dependencies).
+[workspace]
+
+[lib]
+name = "micyou_gui_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "micyou-gui"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [
+  "macos-private-api",
+  "tray-icon",
+  "image-png",
+] }
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-autostart = "2"
+micyou-client = { path = "../../../crates/micyou-client" }
+micyou-api = { path = "../../../crates/micyou-api" }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+log = { version = "0.4", features = ["std"] }
+time = { version = "0.3", features = ["formatting"] }
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.52"
+
+[profile.release]
+lto = "thin"
+strip = true

@@ -33,39 +33,43 @@ MicYou 桌面端后端的独立重构：前后端分离、与 Tauri 解耦的无
 
 ## 下载开发构建（Development Builds）
 
-两个前端各有独立的构建工作流（**仅上传 workflow artifact，不发布 Release**；
+各前端均有独立的构建工作流（**仅上传 workflow artifact，不发布 Release**；
 正式发布应在打 tag 时另行全量构建）：
 
 - [Tauri Dev Build](../../actions/workflows/build-tauri.yml) → `micyou-tauri-{linux-x64,windows-x64,macos-arm64}`（前端 + daemon sidecar）
+- [MicYou GUI Dev Build](../../actions/workflows/build-micyou-gui.yml) → `micyou-gui-{linux-x64,windows-x64,macos-arm64}`（原版 Vue 前端 + daemon sidecar）
 - [Qt Dev Build](../../actions/workflows/build-qt.yml) → `micyou-qt-{linux-x64,windows-x64,macos-arm64}`（windeployqt/macdeployqt 打包 + daemon）
 - [Flutter Dev Build](../../actions/workflows/build-flutter.yml) → `micyou-flutter-{linux-x64,windows-x64,macos-arm64}`（桌面包 + daemon sidecar）
-- [Slint Dev Build](../../actions/workflows/build-slint.yml) → `micyou-slint-{linux-x64,windows-x64,macos-arm64}`（自包含单文件）
 
 在 Actions 页 **Run workflow** 触发，构建完成后于 run 页面底部 Artifacts 下载。
-两个工作流均启用 rust-cache（三 workspace 增量编译）。zip 内附 RUN-README.txt
+各工作流均启用 rust-cache（多 workspace 增量编译）。zip 内附 RUN-README.txt
 （Linux webkit2gtk 依赖、macOS 去隔离、Windows SmartScreen/WebView2 说明）。
 
 ## 参考前端（frontends/，独立 workspace，CI 三平台构建+无头 e2e 测试）
 
 | 前端 | 传输 | 设计语言 |
 |---|---|---|
+| [`frontends/micyou-gui`](./frontends/micyou-gui) | stdio（spawn `micyou-daemon` sidecar） | 原版 MicYou 桌面 UI（Vue 3 + Tailwind，自上游 `tauri-app` 整体移植，Vue 源码零改动） |
 | [`frontends/tauri`](./frontends/tauri) | stdio（spawn `micyou-daemon` sidecar） | Web SPA：自定义深色 CSS、canvas 频谱、侧边栏 |
 | [`frontends/qt`](./frontends/qt) | stdio（spawn sidecar，QProcess） | Qt 原生 Widgets：菜单栏/工具栏/Dock 日志/系统控件外观 |
 | [`frontends/flutter`](./frontends/flutter) | stdio sidecar（dart:io Process spawn daemon）；可选远程 WebSocket | Material 3 桌面端：NavigationRail、种子配色、CustomPaint 频谱 |
-| [`frontends/slint`](./frontends/slint) | 进程内 local 通道（嵌入 `libmicyou::Builder`） | 轻量嵌入式风格原生 GUI（单二进制） |
 
 四个前端都覆盖完整契约面（服务器/音频 DSP 含 10 段 EQ/连接与 IPv6 地址/虚拟设备/
 插件管理/设置/系统），但各自采用其框架的原生设计范式，而非同一界面的多框架复刻。
+其中 `micyou-gui` 通过一层 `invoke` 垫片（`src/adapter/tauri-core.ts`）把上游 65 个
+Tauri 命令映射到 libmicyou 的 JSON-RPC 契约（`backend_rpc` 单命令透传），并把
+daemon 的 `ServerEvent` 事件流桥接回上游的 Tauri 事件名与载荷形状。
 
 ```bash
-# Slint（单进程嵌入后端）
-cd frontends/slint && cargo run
+# 原版 MicYou GUI（先构建前端资产，再构建/运行 Tauri 壳）
+cd frontends/micyou-gui && npm ci && npm run build
+cd src-tauri && cargo run    # 自动 spawn 同目录/PATH/$MICYOU_DAEMON 的守护进程
 
-# Tauri（自动 spawn 同目录/PATH/$MICYOU_DAEMON 的守护进程）
+# Tauri 参考前端（自动 spawn 同目录/PATH/$MICYOU_DAEMON 的守护进程）
 cd frontends/tauri && cargo run
 ```
 
-两个前端的控制器逻辑均与 GUI 解耦，可在 CI 无显示环境下跑完整
+Tauri 参考前端的控制器逻辑与 GUI 解耦，可在 CI 无显示环境下跑完整
 「连接→启动→静音→监听→停止」回归（`cargo test`）；后端另有协议级集成测试
 `phone_loopback`（模拟 Android 客户端全链路：握手/会话绑定/ping-pong/UDP 音频/
 静音同步/插件消息/同端口重启）。

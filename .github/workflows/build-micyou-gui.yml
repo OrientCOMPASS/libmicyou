@@ -1,0 +1,128 @@
+name: MicYou GUI Dev Build
+
+# Development builds of the ported original MicYou GUI (Vue 3 frontend +
+# Tauri shell) and the micyou-daemon sidecar it spawns.
+# Artifacts only — no GitHub Release publishing.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: micyou-gui-dev-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            platform: linux-x64
+          - os: windows-2022
+            platform: windows-x64
+          - os: macos-14
+            platform: macos-arm64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontends/micyou-gui/package-lock.json
+
+      # Incremental caches: daemon (root workspace) + GUI shell workspace.
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            frontends/micyou-gui/src-tauri -> target
+          cache-on-failure: true
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config libasound2-dev libx11-dev libxkbcommon-dev libwayland-dev \
+            libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      # Frontend assets: license report + vue-tsc typecheck + vite bundle.
+      - name: Build frontend (npm)
+        working-directory: frontends/micyou-gui
+        run: |
+          npm ci
+          npm run build
+
+      - name: Build daemon (release)
+        run: cargo build --release -p micyou-daemon
+
+      - name: Build GUI shell (release)
+        working-directory: frontends/micyou-gui/src-tauri
+        run: cargo build --release
+
+      - name: Package (unix)
+        if: runner.os != 'Windows'
+        run: |
+          set -eu
+          mkdir -p stage/micyou-gui
+          cp target/release/micyou-daemon stage/micyou-gui/
+          cp frontends/micyou-gui/src-tauri/target/release/micyou-gui stage/micyou-gui/
+          { git rev-parse --short HEAD; date -u; } > stage/micyou-gui/VERSION.txt
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            cat > stage/micyou-gui/RUN-README.txt <<'NOTES'
+          MicYou 原版 GUI × libmicyou 实验性后端（开发构建）
+
+          运行: ./micyou-gui   （自动拉起同目录 micyou-daemon --stdio）
+          依赖: sudo apt install libwebkit2gtk-4.1-0 libgtk-3-0
+          也可独立跑后端: ./micyou-daemon --ws 127.0.0.1:9610 --autostart
+          日志: 壳 <app_log_dir>/micyou.log；后端 ~/.config/micyou/logs/daemon.log
+          NOTES
+          else
+            cat > stage/micyou-gui/RUN-README.txt <<'NOTES'
+          MicYou 原版 GUI × libmicyou 实验性后端（开发构建，未签名）
+
+          首次运行: xattr -cr .   （解除隔离）
+          终端运行: ./micyou-gui  （自动拉起同目录 micyou-daemon）
+          独立后端: ./micyou-daemon --stdio 或 --ws 127.0.0.1:9610
+          NOTES
+          fi
+          (cd stage && zip -r "../micyou-gui-${{ matrix.platform }}.zip" micyou-gui)
+
+      - name: Package (windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $stage = "stage\micyou-gui"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item target\release\micyou-daemon.exe $stage
+          Copy-Item frontends\micyou-gui\src-tauri\target\release\micyou-gui.exe $stage
+          (git rev-parse --short HEAD) + "`n" + (Get-Date).ToUniversalTime() | Set-Content $stage\VERSION.txt
+          @'
+          MicYou 原版 GUI × libmicyou 实验性后端（开发构建）
+
+          运行: micyou-gui.exe （自动拉起同目录 micyou-daemon.exe）
+          SmartScreen 提示时: 更多信息 → 仍要运行（未签名）。
+          Tauri 窗口空白 → 安装 Microsoft Edge WebView2 Runtime。
+          日志: 壳 %APPDATA%\dev.libmicyou.micyou-gui\logs\micyou.log；
+                后端 %APPDATA%\micyou\logs\daemon.log
+          '@ | Set-Content -Encoding UTF8 $stage\RUN-README.txt
+          Compress-Archive -Path stage\micyou-gui -DestinationPath "micyou-gui-${{ matrix.platform }}.zip" -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: micyou-gui-${{ matrix.platform }}
+          path: micyou-gui-*.zip
+          if-no-files-found: error

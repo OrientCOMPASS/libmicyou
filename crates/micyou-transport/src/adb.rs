@@ -24,7 +24,11 @@ pub struct AdbDevice {
     pub description: String,
 }
 
+/// Internally tagged (`{"type": "Success" | "NoDevices" | "MultipleDevices"}`)
+/// to stay wire-compatible with the stock MicYou GUI, which switches on
+/// `result.type` after `usb/enable`.
 #[derive(serde::Serialize, serde::Deserialize)]
+#[serde(tag = "type")]
 pub enum UsbModeResult {
     Success,
     NoDevices,

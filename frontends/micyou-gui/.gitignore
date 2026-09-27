@@ -1,0 +1,22 @@
+# Build outputs
+node_modules
+dist
+src/generated/third-party-licenses.html
+src-tauri/target
+src-tauri/gen
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
