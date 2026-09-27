@@ -513,6 +513,12 @@ pub struct Session<'g> {
     bound: Vec<Bound>,
     scratch: Vec<f32>,
     scratch2: Vec<f32>,
+    /// Per-op pre-transposed GRU weight tables `(Wt, Rt)` for GRU ops whose
+    /// W/R inputs are constant (the shipped models). Layout per direction:
+    /// `Wt[dir][k][j] = W[dir][j][k]`, `Rt[dir][k][j] = R[dir][j][k]`.
+    /// Built once here so the audio thread never re-transposes (~0.6 ms per
+    /// AEC7 frame otherwise). Parallel to `g.ops`; `None` for other opcodes.
+    gru_pre: Vec<Option<(Box<[f32]>, Box<[f32]>)>>,
 }
 
 // SAFETY: `bound` holds caller pointers that are only dereferenced during
@@ -523,12 +529,24 @@ unsafe impl Send for Session<'_> {}
 
 impl<'g> Session<'g> {
     pub fn new(g: &'g Graph) -> Self {
+        let gru_pre = g
+            .ops
+            .iter()
+            .map(|op| {
+                if op.code == OP_GRU {
+                    build_gru_pre(g, op)
+                } else {
+                    None
+                }
+            })
+            .collect();
         Self {
             g,
             arena: vec![0.0f32; g.arena_len],
             bound: Vec::new(),
             scratch: Vec::new(),
             scratch2: Vec::new(),
+            gru_pre,
         }
     }
 
@@ -758,6 +776,11 @@ impl<'g> Session<'g> {
                 } else {
                     None
                 };
+                let pre = self
+                    .gru_pre
+                    .get(oi)
+                    .and_then(|v| v.as_ref())
+                    .map(|(pw, pr)| (&pw[..], &pr[..]));
                 unsafe {
                     ops::gru(
                         ip[0],
@@ -771,6 +794,7 @@ impl<'g> Session<'g> {
                         hidden,
                         direction,
                         lbr,
+                        pre,
                         scratch,
                     );
                 }
@@ -908,6 +932,42 @@ impl<'g> Session<'g> {
         }
         Ok(())
     }
+}
+
+/// Pre-transpose constant GRU W/R into projection-friendly layouts.
+fn build_gru_pre(g: &Graph, op: &Op) -> Option<(Box<[f32]>, Box<[f32]>)> {
+    let w_slot = &g.slots[op.ins[1] as usize];
+    let r_slot = &g.slots[op.ins[2] as usize];
+    let w_root = &g.slots[w_slot.root as usize];
+    let r_root = &g.slots[r_slot.root as usize];
+    if w_root.kind != SLOT_CONST || r_root.kind != SLOT_CONST {
+        return None;
+    }
+    if w_slot.shape.len() != 3 || r_slot.shape.len() != 3 {
+        return None;
+    }
+    let dir = w_slot.shape[0] as usize;
+    let h3 = w_slot.shape[1] as usize;
+    let in_dim = w_slot.shape[2] as usize;
+    let h = r_slot.shape[2] as usize;
+    if h3 != 3 * h || r_slot.shape[0] as usize != dir || r_slot.shape[1] as usize != h3 {
+        return None;
+    }
+    let w = &g.const_data[w_root.off as usize..w_root.off as usize + w_slot.numel];
+    let r = &g.const_data[r_root.off as usize..r_root.off as usize + r_slot.numel];
+    let mut wt = vec![0.0f32; dir * in_dim * h3];
+    let mut rt = vec![0.0f32; dir * h * h3];
+    for d in 0..dir {
+        for j in 0..h3 {
+            for k in 0..in_dim {
+                wt[(d * in_dim + k) * h3 + j] = w[d * h3 * in_dim + j * in_dim + k];
+            }
+            for k in 0..h {
+                rt[(d * h + k) * h3 + j] = r[d * h3 * h + j * h + k];
+            }
+        }
+    }
+    Some((wt.into_boxed_slice(), rt.into_boxed_slice()))
 }
 
 fn require2(ip: [*const f32; 16], _ilen: [usize; 16], n: usize) -> Result<()> {
