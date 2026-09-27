@@ -250,19 +250,41 @@ class Interpreter:
 
     # ── elementwise ─────────────────────────────────────────────────────
 
+    @staticmethod
+    def _both_int(a, b) -> bool:
+        return np.issubdtype(np.asarray(a).dtype, np.integer) and np.issubdtype(
+            np.asarray(b).dtype, np.integer
+        )
+
     def _op_Add(self, inputs, attrs, node):
+        # int64 structural chains (Shape→Gather→Add→Div→Mul→Slice/Pad/…)
+        # must keep integer semantics end to end.
+        if self._both_int(*inputs):
+            return np.add(inputs[0], inputs[1]).astype(np.int64)
         return _as_f32(np.add(inputs[0], inputs[1]))
 
     def _op_Sub(self, inputs, attrs, node):
+        if self._both_int(*inputs):
+            return np.subtract(inputs[0], inputs[1]).astype(np.int64)
         return _as_f32(np.subtract(inputs[0], inputs[1]))
 
     def _op_Mul(self, inputs, attrs, node):
+        if self._both_int(*inputs):
+            return np.multiply(inputs[0], inputs[1]).astype(np.int64)
         return _as_f32(np.multiply(inputs[0], inputs[1]))
 
     def _op_Div(self, inputs, attrs, node):
-        return _as_f32(np.divide(inputs[0], inputs[1]))
+        a, b = inputs
+        if self._both_int(a, b):
+            # ONNX integer Div truncates toward zero (C semantics); numpy's
+            # `/` would promote to true division. Shape-computation chains
+            # (Shape→Gather→Add→Div→…) rely on this.
+            return np.trunc(np.divide(a, b)).astype(np.int64)
+        return _as_f32(np.divide(a, b))
 
     def _op_Pow(self, inputs, attrs, node):
+        if self._both_int(*inputs):
+            return np.power(inputs[0], inputs[1]).astype(np.int64)
         return _as_f32(np.power(inputs[0], inputs[1]))
 
     def _op_Sqrt(self, inputs, attrs, node):

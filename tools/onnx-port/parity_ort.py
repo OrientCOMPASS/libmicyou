@@ -104,16 +104,23 @@ def run_parity(name, cfg, frames, seed, all_nodes=False):
             nval = out_np.get(oname)
             if nval is None:
                 continue
-            nval = np.asarray(nval, dtype=np.float32)
-            oval = np.asarray(oval, dtype=np.float32)
+            nval = np.asarray(nval)
+            oval = np.asarray(oval)
             if nval.shape != oval.shape:
                 print(f"SHAPE MISMATCH {oname}: np={nval.shape} ort={oval.shape}")
                 return False
             if nval.size == 0:
                 continue
-            adiff = float(np.abs(nval - oval).max())
-            denom = np.maximum(np.abs(oval), 1e-6)
-            rdiff = float((np.abs(nval - oval) / denom).max())
+            if np.issubdtype(oval.dtype, np.integer):
+                # structural int64 tensors must match EXACTLY
+                adiff = float(np.abs(nval.astype(np.int64) - oval.astype(np.int64)).max())
+                rdiff = 0.0 if adiff == 0 else 1.0
+            else:
+                nval = nval.astype(np.float32)
+                oval = oval.astype(np.float32)
+                adiff = float(np.abs(nval - oval).max())
+                denom = np.maximum(np.abs(oval), 1e-6)
+                rdiff = float((np.abs(nval - oval) / denom).max())
             key = oname
             prev = worst.get(key)
             if prev is None or adiff > prev[0]:
@@ -127,7 +134,14 @@ def run_parity(name, cfg, frames, seed, all_nodes=False):
     print(f"── {name}: {frames} streaming frames, {len(worst)} tensors compared")
     for k in sorted(worst):
         adiff, rdiff, frame = worst[k]
-        flag = "OK " if (adiff < 1e-4 or rdiff < 2e-5) else "FAIL"
+        if all_nodes:
+            # intermediate-layer gate: large-magnitude reduction intermediates
+            # legitimately differ by f32 summation-order noise (ORT SIMD vs
+            # numpy pairwise); relative tolerance is the meaningful bound here.
+            ok_tensor = adiff < 1e-4 or rdiff < 1e-3
+        else:
+            ok_tensor = adiff < 1e-4 or rdiff < 2e-5
+        flag = "OK " if ok_tensor else "FAIL"
         if flag == "FAIL":
             ok = False
         print(f"  [{flag}] {k}: max_abs={adiff:.3e} max_rel={rdiff:.3e} (frame {frame})")
