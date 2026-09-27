@@ -1,0 +1,1868 @@
+[
+ {
+  "name": "aec7_0000_gather",
+  "op": "GATHER",
+  "in_lens": [
+   962
+  ],
+  "out_lens": [
+   481
+  ]
+ },
+ {
+  "name": "aec7_0001_gather",
+  "op": "GATHER",
+  "in_lens": [
+   962
+  ],
+  "out_lens": [
+   481
+  ]
+ },
+ {
+  "name": "aec7_0004_sub",
+  "op": "SUB",
+  "in_lens": [
+   481,
+   481
+  ],
+  "out_lens": [
+   481
+  ]
+ },
+ {
+  "name": "aec7_0009_sub",
+  "op": "SUB",
+  "in_lens": [
+   962,
+   962
+  ],
+  "out_lens": [
+   962
+  ]
+ },
+ {
+  "name": "aec7_0019_sub",
+  "op": "SUB",
+  "in_lens": [
+   320,
+   320
+  ],
+  "out_lens": [
+   320
+  ]
+ },
+ {
+  "name": "aec7_0020_sub",
+  "op": "SUB",
+  "in_lens": [
+   320,
+   320
+  ],
+  "out_lens": [
+   320
+  ]
+ },
+ {
+  "name": "aec7_0021_sub",
+  "op": "SUB",
+  "in_lens": [
+   320,
+   320
+  ],
+  "out_lens": [
+   320
+  ]
+ },
+ {
+  "name": "aec7_0036_pow",
+  "op": "POW",
+  "in_lens": [
+   960
+  ],
+  "out_lens": [
+   960
+  ]
+ },
+ {
+  "name": "aec7_0039_sqrt",
+  "op": "SQRT",
+  "in_lens": [
+   320
+  ],
+  "out_lens": [
+   320
+  ]
+ },
+ {
+  "name": "aec7_0040_div",
+  "op": "DIV",
+  "in_lens": [
+   320
+  ],
+  "out_lens": [
+   320
+  ]
+ },
+ {
+  "name": "aec7_0084_pow",
+  "op": "POW",
+  "in_lens": [
+   2560
+  ],
+  "out_lens": [
+   2560
+  ]
+ },
+ {
+  "name": "aec7_0095_gru",
+  "op": "GRU",
+  "in_lens": [
+   160
+  ],
+  "out_lens": [
+   320,
+   10
+  ]
+ },
+ {
+  "name": "aec7_0098_matmul",
+  "op": "MATMUL",
+  "in_lens": [
+   320
+  ],
+  "out_lens": [
+   160
+  ]
+ },
+ {
+  "name": "aec7_0115_pow",
+  "op": "POW",
+  "in_lens": [
+   1920
+  ],
+  "out_lens": [
+   1920
+  ]
+ },
+ {
+  "name": "aec7_0126_gru",
+  "op": "GRU",
+  "in_lens": [
+   80
+  ],
+  "out_lens": [
+   160,
+   10
+  ]
+ },
+ {
+  "name": "aec7_0129_matmul",
+  "op": "MATMUL",
+  "in_lens": [
+   160
+  ],
+  "out_lens": [
+   80
+  ]
+ },
+ {
+  "name": "aec7_0146_pow",
+  "op": "POW",
+  "in_lens": [
+   1440
+  ],
+  "out_lens": [
+   1440
+  ]
+ },
+ {
+  "name": "aec7_0151_matmul",
+  "op": "MATMUL",
+  "in_lens": [
+   72
+  ],
+  "out_lens": [
+   36
+  ]
+ },
+ {
+  "name": "aec7_0157_gru",
+  "op": "GRU",
+  "in_lens": [
+   40
+  ],
+  "out_lens": [
+   80,
+   10
+  ]
+ },
+ {
+  "name": "aec7_0160_matmul",
+  "op": "MATMUL",
+  "in_lens": [
+   80
+  ],
+  "out_lens": [
+   40
+  ]
+ },
+ {
+  "name": "aec7_0323_sqrt",
+  "op": "SQRT",
+  "in_lens": [
+   40
+  ],
+  "out_lens": [
+   40
+  ]
+ },
+ {
+  "name": "aec7_0324_div",
+  "op": "DIV",
+  "in_lens": [
+   40
+  ],
+  "out_lens": [
+   40
+  ]
+ },
+ {
+  "name": "aec7_0448_conv_t",
+  "op": "CONV_T",
+  "in_lens": [
+   3840
+  ],
+  "out_lens": [
+   3840
+  ]
+ },
+ {
+  "name": "aec7_0449_batch_norm",
+  "op": "BATCH_NORM",
+  "in_lens": [
+   3840
+  ],
+  "out_lens": [
+   3840
+  ]
+ },
+ {
+  "name": "aec7_0522_sqrt",
+  "op": "SQRT",
+  "in_lens": [
+   80
+  ],
+  "out_lens": [
+   80
+  ]
+ },
+ {
+  "name": "aec7_0523_div",
+  "op": "DIV",
+  "in_lens": [
+   80
+  ],
+  "out_lens": [
+   80
+  ]
+ },
+ {
+  "name": "aec7_0567_sqrt",
+  "op": "SQRT",
+  "in_lens": [
+   160
+  ],
+  "out_lens": [
+   160
+  ]
+ },
+ {
+  "name": "aec7_0568_div",
+  "op": "DIV",
+  "in_lens": [
+   160
+  ],
+  "out_lens": [
+   160
+  ]
+ },
+ {
+  "name": "aec7_0590_gru",
+  "op": "GRU",
+  "in_lens": [
+   320
+  ],
+  "out_lens": [
+   640,
+   10
+  ]
+ },
+ {
+  "name": "aec7_0604_clip",
+  "op": "CLIP",
+  "in_lens": [
+   481
+  ],
+  "out_lens": [
+   481
+  ]
+ },
+ {
+  "name": "aec7_0614_copy",
+  "op": "COPY",
+  "in_lens": [
+   320
+  ],
+  "out_lens": [
+   320
+  ]
+ },
+ {
+  "name": "purevox6_0003_slice",
+  "op": "SLICE",
+  "in_lens": [
+   1440
+  ],
+  "out_lens": [
+   864
+  ]
+ },
+ {
+  "name": "purevox6_0004_slice",
+  "op": "SLICE",
+  "in_lens": [
+   1440
+  ],
+  "out_lens": [
+   576
+  ]
+ },
+ {
+  "name": "purevox6_0005_slice",
+  "op": "SLICE",
+  "in_lens": [
+   800
+  ],
+  "out_lens": [
+   32
+  ]
+ },
+ {
+  "name": "purevox6_0006_slice",
+  "op": "SLICE",
+  "in_lens": [
+   800
+  ],
+  "out_lens": [
+   48
+  ]
+ },
+ {
+  "name": "purevox6_0007_slice",
+  "op": "SLICE",
+  "in_lens": [
+   800
+  ],
+  "out_lens": [
+   64
+  ]
+ },
+ {
+  "name": "purevox6_0008_slice",
+  "op": "SLICE",
+  "in_lens": [
+   800
+  ],
+  "out_lens": [
+   96
+  ]
+ },
+ {
+  "name": "purevox6_0009_slice",
+  "op": "SLICE",
+  "in_lens": [
+   800
+  ],
+  "out_lens": [
+   96
+  ]
+ },
+ {
+  "name": "purevox6_0010_slice",
+  "op": "SLICE",
+  "in_lens": [
+   800
+  ],
+  "out_lens": [
+   128
+  ]
+ },
+ {
+  "name": "purevox6_0011_slice",
+  "op": "SLICE",
+  "in_lens": [
+   800
+  ],
+  "out_lens": [
+   96
+  ]
+ },
+ {
+  "name": "purevox6_0012_slice",
+  "op": "SLICE",
+  "in_lens": [
+   800
+  ],
+  "out_lens": [
+   96
+  ]
+ },
+ {
+  "name": "purevox6_0018_transpose",
+  "op": "TRANSPOSE",
+  "in_lens": [
+   962
+  ],
+  "out_lens": [
+   962
+  ]
+ },
+ {
+  "name": "purevox6_0019_reduce_l2",
+  "op": "REDUCE_L2",
+  "in_lens": [
+   962
+  ],
+  "out_lens": [
+   481
+  ]
+ },
+ {
+  "name": "purevox6_0020_clip",
+  "op": "CLIP",
+  "in_lens": [
+   481
+  ],
+  "out_lens": [
+   481
+  ]
+ },
+ {
+  "name": "purevox6_0021_log",
+  "op": "LOG",
+  "in_lens": [
+   481
+  ],
+  "out_lens": [
+   481
+  ]
+ },
+ {
+  "name": "purevox6_0022_div",
+  "op": "DIV",
+  "in_lens": [
+   481
+  ],
+  "out_lens": [
+   481
+  ]
+ },
+ {
+  "name": "purevox6_0026_concat",
+  "op": "CONCAT",
+  "in_lens": [
+   100,
+   41
+  ],
+  "out_lens": [
+   141
+  ]
+ },
+ {
+  "name": "purevox6_0027_conv",
+  "op": "CONV",
+  "in_lens": [
+   141
+  ],
+  "out_lens": [
+   2256
+  ]
+ },
+ {
+  "name": "purevox6_0028_sigmoid",
+  "op": "SIGMOID",
+  "in_lens": [
+   2256
+  ],
+  "out_lens": [
+   2256
+  ]
+ },
+ {
+  "name": "purevox6_0029_mul",
+  "op": "MUL",
+  "in_lens": [
+   2256,
+   2256
+  ],
+  "out_lens": [
+   2256
+  ]
+ },
+ {
+  "name": "purevox6_0032_conv",
+  "op": "CONV",
+  "in_lens": [
+   6768
+  ],
+  "out_lens": [
+   1136
+  ]
+ },
+ {
+  "name": "purevox6_0033_sigmoid",
+  "op": "SIGMOID",
+  "in_lens": [
+   1136
+  ],
+  "out_lens": [
+   1136
+  ]
+ },
+ {
+  "name": "purevox6_0034_mul",
+  "op": "MUL",
+  "in_lens": [
+   1136,
+   1136
+  ],
+  "out_lens": [
+   1136
+  ]
+ },
+ {
+  "name": "purevox6_0035_pow",
+  "op": "POW",
+  "in_lens": [
+   1136
+  ],
+  "out_lens": [
+   1136
+  ]
+ },
+ {
+  "name": "purevox6_0036_reduce_mean",
+  "op": "REDUCE_MEAN",
+  "in_lens": [
+   1136
+  ],
+  "out_lens": [
+   16
+  ]
+ },
+ {
+  "name": "purevox6_0037_transpose",
+  "op": "TRANSPOSE",
+  "in_lens": [
+   16
+  ],
+  "out_lens": [
+   16
+  ]
+ },
+ {
+  "name": "purevox6_0038_gru",
+  "op": "GRU",
+  "in_lens": [
+   16,
+   32
+  ],
+  "out_lens": [
+   32,
+   32
+  ]
+ },
+ {
+  "name": "purevox6_0039_transpose",
+  "op": "TRANSPOSE",
+  "in_lens": [
+   32
+  ],
+  "out_lens": [
+   32
+  ]
+ },
+ {
+  "name": "purevox6_0040_matmul",
+  "op": "MATMUL",
+  "in_lens": [
+   32
+  ],
+  "out_lens": [
+   16
+  ]
+ },
+ {
+  "name": "purevox6_0041_add",
+  "op": "ADD",
+  "in_lens": [
+   16
+  ],
+  "out_lens": [
+   16
+  ]
+ },
+ {
+  "name": "purevox6_0042_transpose",
+  "op": "TRANSPOSE",
+  "in_lens": [
+   16
+  ],
+  "out_lens": [
+   16
+  ]
+ },
+ {
+  "name": "purevox6_0043_sigmoid",
+  "op": "SIGMOID",
+  "in_lens": [
+   16
+  ],
+  "out_lens": [
+   16
+  ]
+ },
+ {
+  "name": "purevox6_0044_reduce_mean",
+  "op": "REDUCE_MEAN",
+  "in_lens": [
+   1136
+  ],
+  "out_lens": [
+   71
+  ]
+ },
+ {
+  "name": "purevox6_0045_pad",
+  "op": "PAD",
+  "in_lens": [
+   71
+  ],
+  "out_lens": [
+   72
+  ]
+ },
+ {
+  "name": "purevox6_0046_transpose",
+  "op": "TRANSPOSE",
+  "in_lens": [
+   72
+  ],
+  "out_lens": [
+   72
+  ]
+ },
+ {
+  "name": "purevox6_0047_gru",
+  "op": "GRU",
+  "in_lens": [
+   72
+  ],
+  "out_lens": [
+   144,
+   8
+  ]
+ },
+ {
+  "name": "purevox6_0048_transpose",
+  "op": "TRANSPOSE",
+  "in_lens": [
+   144
+  ],
+  "out_lens": [
+   144
+  ]
+ },
+ {
+  "name": "purevox6_0049_transpose",
+  "op": "TRANSPOSE",
+  "in_lens": [
+   144
+  ],
+  "out_lens": [
+   144
+  ]
+ },
+ {
+  "name": "purevox6_0050_matmul",
+  "op": "MATMUL",
+  "in_lens": [
+   144
+  ],
+  "out_lens": [
+   72
+  ]
+ },
+ {
+  "name": "purevox6_0051_add",
+  "op": "ADD",
+  "in_lens": [
+   72
+  ],
+  "out_lens": [
+   72
+  ]
+ },
+ {
+  "name": "purevox6_0053_sigmoid",
+  "op": "SIGMOID",
+  "in_lens": [
+   71
+  ],
+  "out_lens": [
+   71
+  ]
+ },
+ {
+  "name": "purevox6_0054_mul",
+  "op": "MUL",
+  "in_lens": [
+   16,
+   1136
+  ],
+  "out_lens": [
+   1136
+  ]
+ },
+ {
+  "name": "purevox6_0055_mul",
+  "op": "MUL",
+  "in_lens": [
+   1136,
+   71
+  ],
+  "out_lens": [
+   1136
+  ]
+ },
+ {
+  "name": "purevox6_0056_conv",
+  "op": "CONV",
+  "in_lens": [
+   1136
+  ],
+  "out_lens": [
+   1704
+  ]
+ },
+ {
+  "name": "purevox6_0057_sigmoid",
+  "op": "SIGMOID",
+  "in_lens": [
+   1704
+  ],
+  "out_lens": [
+   1704
+  ]
+ },
+ {
+  "name": "purevox6_0058_mul",
+  "op": "MUL",
+  "in_lens": [
+   1704,
+   1704
+  ],
+  "out_lens": [
+   1704
+  ]
+ },
+ {
+  "name": "purevox6_0061_concat",
+  "op": "CONCAT",
+  "in_lens": [
+   852,
+   852
+  ],
+  "out_lens": [
+   1704
+  ]
+ },
+ {
+  "name": "purevox6_0062_concat",
+  "op": "CONCAT",
+  "in_lens": [
+   1704,
+   1704
+  ],
+  "out_lens": [
+   3408
+  ]
+ },
+ {
+  "name": "purevox6_0064_conv",
+  "op": "CONV",
+  "in_lens": [
+   3408
+  ],
+  "out_lens": [
+   864
+  ]
+ },
+ {
+  "name": "purevox6_0065_sigmoid",
+  "op": "SIGMOID",
+  "in_lens": [
+   864
+  ],
+  "out_lens": [
+   864
+  ]
+ },
+ {
+  "name": "purevox6_0066_mul",
+  "op": "MUL",
+  "in_lens": [
+   864,
+   864
+  ],
+  "out_lens": [
+   864
+  ]
+ },
+ {
+  "name": "purevox6_0067_pow",
+  "op": "POW",
+  "in_lens": [
+   864
+  ],
+  "out_lens": [
+   864
+  ]
+ },
+ {
+  "name": "purevox6_0068_reduce_mean",
+  "op": "REDUCE_MEAN",
+  "in_lens": [
+   864
+  ],
+  "out_lens": [
+   24
+  ]
+ },
+ {
+  "name": "purevox6_0069_transpose",
+  "op": "TRANSPOSE",
+  "in_lens": [
+   24
+  ],
+  "out_lens": [
+   24
+  ]
+ },
+ {
+  "name": "purevox6_0071_transpose",
+  "op": "TRANSPOSE",
+  "in_lens": [
+   48
+  ],
+  "out_lens": [
+   48
+  ]
+ },
+ {
+  "name": "purevox6_0072_matmul",
+  "op": "MATMUL",
+  "in_lens": [
+   48
+  ],
+  "out_lens": [
+   24
+  ]
+ },
+ {
+  "name": "purevox6_0073_add",
+  "op": "ADD",
+  "in_lens": [
+   24
+  ],
+  "out_lens": [
+   24
+  ]
+ },
+ {
+  "name": "purevox6_0074_transpose",
+  "op": "TRANSPOSE",
+  "in_lens": [
+   24
+  ],
+  "out_lens": [
+   24
+  ]
+ },
+ {
+  "name": "purevox6_0075_sigmoid",
+  "op": "SIGMOID",
+  "in_lens": [
+   24
+  ],
+  "out_lens": [
+   24
+  ]
+ },
+ {
+  "name": "purevox6_0076_reduce_mean",
+  "op": "REDUCE_MEAN",
+  "in_lens": [
+   864
+  ],
+  "out_lens": [
+   36
+  ]
+ },
+ {
+  "name": "purevox6_0078_gru",
+  "op": "GRU",
+  "in_lens": [
+   36
+  ],
+  "out_lens": [
+   72,
+   8
+  ]
+ },
+ {
+  "name": "purevox6_0081_matmul",
+  "op": "MATMUL",
+  "in_lens": [
+   72
+  ],
+  "out_lens": [
+   36
+  ]
+ },
+ {
+  "name": "purevox6_0082_add",
+  "op": "ADD",
+  "in_lens": [
+   36
+  ],
+  "out_lens": [
+   36
+  ]
+ },
+ {
+  "name": "purevox6_0083_sigmoid",
+  "op": "SIGMOID",
+  "in_lens": [
+   36
+  ],
+  "out_lens": [
+   36
+  ]
+ },
+ {
+  "name": "purevox6_0084_mul",
+  "op": "MUL",
+  "in_lens": [
+   24,
+   864
+  ],
+  "out_lens": [
+   864
+  ]
+ },
+ {
+  "name": "purevox6_0085_mul",
+  "op": "MUL",
+  "in_lens": [
+   864,
+   36
+  ],
+  "out_lens": [
+   864
+  ]
+ },
+ {
+  "name": "purevox6_0086_conv",
+  "op": "CONV",
+  "in_lens": [
+   864
+  ],
+  "out_lens": [
+   1152
+  ]
+ },
+ {
+  "name": "purevox6_0087_sigmoid",
+  "op": "SIGMOID",
+  "in_lens": [
+   1152
+  ],
+  "out_lens": [
+   1152
+  ]
+ },
+ {
+  "name": "purevox6_0088_mul",
+  "op": "MUL",
+  "in_lens": [
+   1152,
+   1152
+  ],
+  "out_lens": [
+   1152
+  ]
+ },
+ {
+  "name": "purevox6_0091_concat",
+  "op": "CONCAT",
+  "in_lens": [
+   576,
+   576
+  ],
+  "out_lens": [
+   1152
+  ]
+ },
+ {
+  "name": "purevox6_0092_concat",
+  "op": "CONCAT",
+  "in_lens": [
+   1152,
+   1152
+  ],
+  "out_lens": [
+   2304
+  ]
+ },
+ {
+  "name": "purevox6_0094_conv",
+  "op": "CONV",
+  "in_lens": [
+   2304
+  ],
+  "out_lens": [
+   1152
+  ]
+ },
+ {
+  "name": "purevox6_0097_pow",
+  "op": "POW",
+  "in_lens": [
+   1152
+  ],
+  "out_lens": [
+   1152
+  ]
+ },
+ {
+  "name": "purevox6_0098_reduce_mean",
+  "op": "REDUCE_MEAN",
+  "in_lens": [
+   1152
+  ],
+  "out_lens": [
+   32
+  ]
+ },
+ {
+  "name": "purevox6_0102_matmul",
+  "op": "MATMUL",
+  "in_lens": [
+   64
+  ],
+  "out_lens": [
+   32
+  ]
+ },
+ {
+  "name": "purevox6_0103_add",
+  "op": "ADD",
+  "in_lens": [
+   32
+  ],
+  "out_lens": [
+   32
+  ]
+ },
+ {
+  "name": "purevox6_0105_sigmoid",
+  "op": "SIGMOID",
+  "in_lens": [
+   32
+  ],
+  "out_lens": [
+   32
+  ]
+ },
+ {
+  "name": "purevox6_0106_reduce_mean",
+  "op": "REDUCE_MEAN",
+  "in_lens": [
+   1152
+  ],
+  "out_lens": [
+   36
+  ]
+ },
+ {
+  "name": "purevox6_0114_mul",
+  "op": "MUL",
+  "in_lens": [
+   32,
+   1152
+  ],
+  "out_lens": [
+   1152
+  ]
+ },
+ {
+  "name": "purevox6_0116_conv",
+  "op": "CONV",
+  "in_lens": [
+   1152
+  ],
+  "out_lens": [
+   1728
+  ]
+ },
+ {
+  "name": "purevox6_0121_concat",
+  "op": "CONCAT",
+  "in_lens": [
+   864,
+   864
+  ],
+  "out_lens": [
+   1728
+  ]
+ },
+ {
+  "name": "purevox6_0122_conv",
+  "op": "CONV",
+  "in_lens": [
+   1728
+  ],
+  "out_lens": [
+   1728
+  ]
+ },
+ {
+  "name": "purevox6_0125_pow",
+  "op": "POW",
+  "in_lens": [
+   1728
+  ],
+  "out_lens": [
+   1728
+  ]
+ },
+ {
+  "name": "purevox6_0126_reduce_mean",
+  "op": "REDUCE_MEAN",
+  "in_lens": [
+   1728
+  ],
+  "out_lens": [
+   48
+  ]
+ },
+ {
+  "name": "purevox6_0130_matmul",
+  "op": "MATMUL",
+  "in_lens": [
+   96
+  ],
+  "out_lens": [
+   48
+  ]
+ },
+ {
+  "name": "purevox6_0131_add",
+  "op": "ADD",
+  "in_lens": [
+   48
+  ],
+  "out_lens": [
+   48
+  ]
+ },
+ {
+  "name": "purevox6_0134_reduce_mean",
+  "op": "REDUCE_MEAN",
+  "in_lens": [
+   1728
+  ],
+  "out_lens": [
+   36
+  ]
+ },
+ {
+  "name": "purevox6_0144_conv",
+  "op": "CONV",
+  "in_lens": [
+   1728
+  ],
+  "out_lens": [
+   1728
+  ]
+ },
+ {
+  "name": "purevox6_0172_conv",
+  "op": "CONV",
+  "in_lens": [
+   1728
+  ],
+  "out_lens": [
+   2304
+  ]
+ },
+ {
+  "name": "purevox6_0177_concat",
+  "op": "CONCAT",
+  "in_lens": [
+   1152,
+   1152
+  ],
+  "out_lens": [
+   2304
+  ]
+ },
+ {
+  "name": "purevox6_0181_pow",
+  "op": "POW",
+  "in_lens": [
+   2304
+  ],
+  "out_lens": [
+   2304
+  ]
+ },
+ {
+  "name": "purevox6_0182_reduce_mean",
+  "op": "REDUCE_MEAN",
+  "in_lens": [
+   2304
+  ],
+  "out_lens": [
+   64
+  ]
+ },
+ {
+  "name": "purevox6_0187_add",
+  "op": "ADD",
+  "in_lens": [
+   64
+  ],
+  "out_lens": [
+   64
+  ]
+ },
+ {
+  "name": "purevox6_0190_reduce_mean",
+  "op": "REDUCE_MEAN",
+  "in_lens": [
+   2304
+  ],
+  "out_lens": [
+   36
+  ]
+ },
+ {
+  "name": "purevox6_0206_add",
+  "op": "ADD",
+  "in_lens": [
+   2304
+  ],
+  "out_lens": [
+   2304
+  ]
+ },
+ {
+  "name": "purevox6_0208_sub",
+  "op": "SUB",
+  "in_lens": [
+   2304,
+   1
+  ],
+  "out_lens": [
+   2304
+  ]
+ },
+ {
+  "name": "purevox6_0209_pow",
+  "op": "POW",
+  "in_lens": [
+   2304
+  ],
+  "out_lens": [
+   2304
+  ]
+ },
+ {
+  "name": "purevox6_0211_add",
+  "op": "ADD",
+  "in_lens": [
+   1
+  ],
+  "out_lens": [
+   1
+  ]
+ },
+ {
+  "name": "purevox6_0212_sqrt",
+  "op": "SQRT",
+  "in_lens": [
+   1
+  ],
+  "out_lens": [
+   1
+  ]
+ },
+ {
+  "name": "purevox6_0213_div",
+  "op": "DIV",
+  "in_lens": [
+   2304,
+   1
+  ],
+  "out_lens": [
+   2304
+  ]
+ },
+ {
+  "name": "purevox6_0215_add",
+  "op": "ADD",
+  "in_lens": [
+   2304
+  ],
+  "out_lens": [
+   2304
+  ]
+ },
+ {
+  "name": "purevox6_0225_sub",
+  "op": "SUB",
+  "in_lens": [
+   2304,
+   1
+  ],
+  "out_lens": [
+   2304
+  ]
+ },
+ {
+  "name": "purevox6_0274_conv_t",
+  "op": "CONV_T",
+  "in_lens": [
+   1728
+  ],
+  "out_lens": [
+   1728
+  ]
+ },
+ {
+  "name": "purevox6_0275_batch_norm",
+  "op": "BATCH_NORM",
+  "in_lens": [
+   1728
+  ],
+  "out_lens": [
+   1728
+  ]
+ },
+ {
+  "name": "purevox6_0334_conv_t",
+  "op": "CONV_T",
+  "in_lens": [
+   1152
+  ],
+  "out_lens": [
+   1152
+  ]
+ },
+ {
+  "name": "purevox6_0335_batch_norm",
+  "op": "BATCH_NORM",
+  "in_lens": [
+   1152
+  ],
+  "out_lens": [
+   1152
+  ]
+ },
+ {
+  "name": "purevox6_0363_concat",
+  "op": "CONCAT",
+  "in_lens": [
+   432,
+   432
+  ],
+  "out_lens": [
+   864
+  ]
+ },
+ {
+  "name": "purevox6_0364_concat",
+  "op": "CONCAT",
+  "in_lens": [
+   864,
+   864
+  ],
+  "out_lens": [
+   1728
+  ]
+ },
+ {
+  "name": "purevox6_0365_conv_t",
+  "op": "CONV_T",
+  "in_lens": [
+   1728
+  ],
+  "out_lens": [
+   864
+  ]
+ },
+ {
+  "name": "purevox6_0367_batch_norm",
+  "op": "BATCH_NORM",
+  "in_lens": [
+   864
+  ],
+  "out_lens": [
+   864
+  ]
+ },
+ {
+  "name": "purevox6_0395_concat",
+  "op": "CONCAT",
+  "in_lens": [
+   288,
+   288
+  ],
+  "out_lens": [
+   576
+  ]
+ },
+ {
+  "name": "purevox6_0397_conv_t",
+  "op": "CONV_T",
+  "in_lens": [
+   1152
+  ],
+  "out_lens": [
+   1136
+  ]
+ },
+ {
+  "name": "purevox6_0399_batch_norm",
+  "op": "BATCH_NORM",
+  "in_lens": [
+   1136
+  ],
+  "out_lens": [
+   1136
+  ]
+ },
+ {
+  "name": "purevox6_0427_conv_t",
+  "op": "CONV_T",
+  "in_lens": [
+   71
+  ],
+  "out_lens": [
+   141
+  ]
+ },
+ {
+  "name": "purevox6_0428_batch_norm",
+  "op": "BATCH_NORM",
+  "in_lens": [
+   141
+  ],
+  "out_lens": [
+   141
+  ]
+ },
+ {
+  "name": "syn_add_rowvec",
+  "op": "ADD",
+  "in_lens": [
+   5,
+   15
+  ],
+  "out_lens": [
+   15
+  ]
+ },
+ {
+  "name": "syn_batchnorm",
+  "op": "BATCH_NORM",
+  "in_lens": [
+   12
+  ],
+  "out_lens": [
+   12
+  ]
+ },
+ {
+  "name": "syn_clip_both",
+  "op": "CLIP",
+  "in_lens": [
+   9
+  ],
+  "out_lens": [
+   9
+  ]
+ },
+ {
+  "name": "syn_clip_lo",
+  "op": "CLIP",
+  "in_lens": [
+   9
+  ],
+  "out_lens": [
+   9
+  ]
+ },
+ {
+  "name": "syn_concat3",
+  "op": "CONCAT",
+  "in_lens": [
+   4,
+   6,
+   2
+  ],
+  "out_lens": [
+   12
+  ]
+ },
+ {
+  "name": "syn_conv_dw_dilated",
+  "op": "CONV",
+  "in_lens": [
+   192
+  ],
+  "out_lens": [
+   192
+  ]
+ },
+ {
+  "name": "syn_conv_grouped_im2col",
+  "op": "CONV",
+  "in_lens": [
+   100
+  ],
+  "out_lens": [
+   150
+  ]
+ },
+ {
+  "name": "syn_conv_stride_nobias",
+  "op": "CONV",
+  "in_lens": [
+   84
+  ],
+  "out_lens": [
+   27
+  ]
+ },
+ {
+  "name": "syn_convt_outpad",
+  "op": "CONV_T",
+  "in_lens": [
+   24
+  ],
+  "out_lens": [
+   144
+  ]
+ },
+ {
+  "name": "syn_copy",
+  "op": "COPY",
+  "in_lens": [
+   9
+  ],
+  "out_lens": [
+   9
+  ]
+ },
+ {
+  "name": "syn_div_scalar",
+  "op": "DIV",
+  "in_lens": [
+   24,
+   1
+  ],
+  "out_lens": [
+   24
+  ]
+ },
+ {
+  "name": "syn_expand",
+  "op": "EXPAND",
+  "in_lens": [
+   3
+  ],
+  "out_lens": [
+   60
+  ]
+ },
+ {
+  "name": "syn_expand_scalar",
+  "op": "EXPAND",
+  "in_lens": [
+   1
+  ],
+  "out_lens": [
+   4
+  ]
+ },
+ {
+  "name": "syn_gather_axis1_scalar_idx",
+  "op": "GATHER",
+  "in_lens": [
+   24
+  ],
+  "out_lens": [
+   8
+  ]
+ },
+ {
+  "name": "syn_gather_neg",
+  "op": "GATHER",
+  "in_lens": [
+   24
+  ],
+  "out_lens": [
+   12
+  ]
+ },
+ {
+  "name": "syn_gru_backward_bias_h0",
+  "op": "GRU",
+  "in_lens": [
+   12,
+   5
+  ],
+  "out_lens": [
+   5
+  ]
+ },
+ {
+  "name": "syn_gru_bidi_noh0",
+  "op": "GRU",
+  "in_lens": [
+   12
+  ],
+  "out_lens": [
+   10
+  ]
+ },
+ {
+  "name": "syn_gru_forward_nobias",
+  "op": "GRU",
+  "in_lens": [
+   12
+  ],
+  "out_lens": [
+   15
+  ]
+ },
+ {
+  "name": "syn_layernorm_axis1",
+  "op": "LAYER_NORM",
+  "in_lens": [
+   24
+  ],
+  "out_lens": [
+   24
+  ]
+ },
+ {
+  "name": "syn_log_edge",
+  "op": "LOG",
+  "in_lens": [
+   5
+  ],
+  "out_lens": [
+   5
+  ]
+ },
+ {
+  "name": "syn_matmul_2d",
+  "op": "MATMUL",
+  "in_lens": [
+   20,
+   12
+  ],
+  "out_lens": [
+   15
+  ]
+ },
+ {
+  "name": "syn_matmul_4d",
+  "op": "MATMUL",
+  "in_lens": [
+   6,
+   12
+  ],
+  "out_lens": [
+   2
+  ]
+ },
+ {
+  "name": "syn_matmul_batch",
+  "op": "MATMUL",
+  "in_lens": [
+   24,
+   12
+  ],
+  "out_lens": [
+   18
+  ]
+ },
+ {
+  "name": "syn_mul_chan_broadcast",
+  "op": "MUL",
+  "in_lens": [
+   24,
+   6
+  ],
+  "out_lens": [
+   24
+  ]
+ },
+ {
+  "name": "syn_pad_cv",
+  "op": "PAD",
+  "in_lens": [
+   6
+  ],
+  "out_lens": [
+   15
+  ]
+ },
+ {
+  "name": "syn_pow3",
+  "op": "POW",
+  "in_lens": [
+   16,
+   1
+  ],
+  "out_lens": [
+   16
+  ]
+ },
+ {
+  "name": "syn_reduce_l2",
+  "op": "REDUCE_L2",
+  "in_lens": [
+   24
+  ],
+  "out_lens": [
+   6
+  ]
+ },
+ {
+  "name": "syn_reduce_mean_axes02_nk",
+  "op": "REDUCE_MEAN",
+  "in_lens": [
+   24
+  ],
+  "out_lens": [
+   3
+  ]
+ },
+ {
+  "name": "syn_reduce_mean_axis1_kd",
+  "op": "REDUCE_MEAN",
+  "in_lens": [
+   24
+  ],
+  "out_lens": [
+   8
+  ]
+ },
+ {
+  "name": "syn_resize_shrink_grow",
+  "op": "RESIZE",
+  "in_lens": [
+   24
+  ],
+  "out_lens": [
+   24
+  ]
+ },
+ {
+  "name": "syn_sigmoid_extremes",
+  "op": "SIGMOID",
+  "in_lens": [
+   6
+  ],
+  "out_lens": [
+   6
+  ]
+ },
+ {
+  "name": "syn_slice_empty",
+  "op": "SLICE",
+  "in_lens": [
+   70
+  ],
+  "out_lens": [
+   0
+  ]
+ },
+ {
+  "name": "syn_slice_neg_partial",
+  "op": "SLICE",
+  "in_lens": [
+   70
+  ],
+  "out_lens": [
+   30
+  ]
+ },
+ {
+  "name": "syn_slice_pos_multi",
+  "op": "SLICE",
+  "in_lens": [
+   70
+  ],
+  "out_lens": [
+   42
+  ]
+ },
+ {
+  "name": "syn_slice_reverse",
+  "op": "SLICE",
+  "in_lens": [
+   70
+  ],
+  "out_lens": [
+   70
+  ]
+ },
+ {
+  "name": "syn_sqrt_edge",
+  "op": "SQRT",
+  "in_lens": [
+   4
+  ],
+  "out_lens": [
+   4
+  ]
+ },
+ {
+  "name": "syn_transpose_4d",
+  "op": "TRANSPOSE",
+  "in_lens": [
+   120
+  ],
+  "out_lens": [
+   120
+  ]
+ }
+]
