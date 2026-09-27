@@ -109,7 +109,8 @@ jobs:
       - name: Run baseline bench (ort, main tree)
         working-directory: base/xtask/bench-ort
         run: |
-          cargo pkgid | grep -q bench-ort   # fail loudly if cargo resolves the wrong workspace
+          # fail loudly if cargo resolves the wrong workspace (no lockfile needed)
+          test "$(cargo locate-project --workspace --message-format plain)" = "$PWD/Cargo.toml"
           MICYOU_ORT_LIB="$ORT_LIB" \
           MICYOU_MODEL_DIR="$GITHUB_WORKSPACE/base/crates/micyou-core/resources" \
             cargo run --release -- --frames 3000 --json "$GITHUB_WORKSPACE/ort.json"
@@ -117,7 +118,7 @@ jobs:
       - name: Run native bench (PR tree)
         working-directory: head/xtask/bench-native
         run: |
-          cargo pkgid | grep -q bench-native
+          test "$(cargo locate-project --workspace --message-format plain)" = "$PWD/Cargo.toml"
           cargo run --release -- --frames 3000 --json "$GITHUB_WORKSPACE/native.json"
 
       - name: Compare → job summary
