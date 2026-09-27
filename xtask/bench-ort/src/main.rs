@@ -183,8 +183,14 @@ fn main() {
         println!("wrote {path}");
     }
 
-    // ONNX Runtime (load-dynamic) segfaults during process teardown on some
-    // runners (static destructors racing the dylib unload) *after* all work
-    // is done. Exit directly — results are fully written at this point.
+    // ONNX Runtime (load-dynamic) segfaults in atexit/C++ static destructors
+    // during process teardown on the runner — *after* all benchmark work is
+    // done and ort.json is written. `std::process::exit` still runs those
+    // handlers, so skip them entirely with `_exit`.
+    #[cfg(unix)]
+    unsafe {
+        libc::_exit(0);
+    }
+    #[allow(unreachable_code)]
     std::process::exit(0);
 }
