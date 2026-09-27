@@ -99,15 +99,29 @@ golden fixtures 由 `gen_golden.py` / `gen_td_golden.py` 生成并提交
 
 ## 5. 性能(与 ort 版对比)
 
-CI `bench` job 在同一 GitHub runner 上分别对 `main`(ort + onnxruntime 1.19.2,
-`intra/inter_threads=1`)与本分支(纯 Rust VM)运行同一 harness
-(`xtask/bench-{ort,native}`,相同的确定性信号、4 种 DSP 配置、480 样本/帧),
-结果写入 job summary。本地开发机没有可比性,以 CI 数字为准:
+CI `bench` job 在同一 GitHub runner(ubuntu-22.04,单线程)上分别对 `main`
+(ort 2.0.0-rc.13 + onnxruntime 1.19.2,`intra/inter_threads=1`)与本分支
+(纯 Rust VM)运行同一 harness(`xtask/bench-{ort,native}`,相同确定性信号、
+300 warmup + 3000 计量帧、480 样本/帧 = 10 ms 实时预算)。
 
-> (首跑后由 CI 结果回填 — 见 PR 的 bench job summary)
+**实测(run 36326547644,2026-09-27,每帧延迟):**
 
-预算参照:实时约束为每帧 10 ms(48 kHz、480 样本 hop)。模型计算量
-2.75/8.4 MMAC/帧,VM 内核以标量 f32 为主、依赖自动向量化。
+| 配置 | ort mean | native mean | native/ort | native p95 | native RTF |
+|---|---:|---:|---:|---:|---:|
+| 基线链(无模型) | 5 µs | 5 µs | 1.00× | 5 µs | 0.0005 |
+| purevox6 | 1002 µs | **985 µs** | **0.98×** | 1000 µs | 0.098 |
+| aec7 | 2380 µs | 3062 µs | 1.29× | 3155 µs | 0.306 |
+| **aec7 + purevox6** | 3712 µs | **3844 µs** | **1.04×** | 3943 µs | **0.384** |
+
+- 组合生产配置下与 ort **基本打平(1.04×)**,RTF 0.384 → 实时余量 ~2.6×;
+  purevox6 单模型已反超 MLAS。
+- 首版朴素 VM 为 2.7–3.5×(aec7 7.8 ms,RTF 1.06 超预算);一轮剖析驱动优化
+  (AVX2+FMA 运行时派发、无分支 exp/tanh、GRU 权重 L1 复用与预转置、
+  reduce 向量化特例、DW conv axpy 化)后到达上表数字。
+- aec7 剩余 ~29% 差距来自 MLAS 的 AVX GEMM 微内核 vs 本 VM 的直白循环,
+  以及每帧 ~1.2 MB 的缓存回拷;后续可做 GEMM 分块、ConvT 重排与
+  缓存 ping-pong(见 §7)。
+- GitHub runner 为共享虚机,绝对值有噪声(~5%),比值取同 run 内对比。
 
 ## 6. 目录导航
 
@@ -126,7 +140,7 @@ crates/micyou-audio/src/assets/*.mcy{,.json}   # 编译产物(+可读 sidecar)
 xtask/bench-{native,ort}/  # 性能对比 harness(独立 workspace)
 ```
 
-## 7. 已知边界
+## 7. 已知边界与后续优化空间
 
 - VM 只支持这两个模型编译出的算子子集与静态 shape(编译器对其他图会显式报错,
   而非静默降级);
@@ -134,4 +148,8 @@ xtask/bench-{native,ort}/  # 性能对比 harness(独立 workspace)
 - 若上游更换模型(如 PureVox 202609 三件套契约),重跑 `compile_models.py` 即可,
   新算子需求会在编译期暴露;
 - f32 求和序与 ORT 存在 ~1e-6 级差异(与 silero 移植同量级),听感无影响,
-  流式反馈下不发散(16 帧自反馈漂移实测 ≤1.2e-5,系统收缩性良好)。
+  流式反馈下不发散(16 帧自反馈漂移实测 ≤1.4e-5,系统收缩性良好);
+- 性能后续空间(按剖析占比排序):pointwise conv 的 mi 方向寄存器分块、
+  ConvTranspose scatter 重排、AEC 缓存 ping-pong 消除每帧 ~1.2 MB 回拷、
+  SiLU(sigmoid×mul)算子融合;AVX-512 派发档亦可直接挂进现有
+  `have_avx2` 同款机制。
