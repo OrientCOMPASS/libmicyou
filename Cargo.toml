@@ -22,7 +22,6 @@ authors = [
   "OrientCOMPASS (libmicyou refactor)",
 ]
 edition = "2021"
-license = "GPL-3.0-or-later"
 repository = "https://github.com/OrientCOMPASS/libmicyou"
 rust-version = "1.87"
 

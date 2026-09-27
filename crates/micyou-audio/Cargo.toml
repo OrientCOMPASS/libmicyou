@@ -4,7 +4,6 @@ description = "MicYou audio engine: cpal output, resampling, DSP chain (AEC/NS/d
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
-license.workspace = true
 repository.workspace = true
 
 [features]

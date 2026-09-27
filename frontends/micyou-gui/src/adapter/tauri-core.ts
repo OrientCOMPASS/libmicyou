@@ -1,12 +1,4 @@
-/*
- * libmicyou — micyou-gui frontend adapter.
- * Derived from MicYou <https://github.com/LanRhyme/MicYou>.
- *
- * Copyright (C) 2026 LanRhyme (original MicYou command semantics)
- * Copyright (C) 2026 OrientCOMPASS (libmicyou adapter shim)
- *
- * GPL-3.0-or-later with the MicYou Plugin Exception. See LICENSE (repo root).
- */
+/* libmicyou — micyou-gui frontend adapter. */
 
 /**
  * `invoke()` compatibility shim between the original MicYou Vue frontend and

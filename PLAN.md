@@ -103,7 +103,7 @@
 
 | 阶段 | 内容 | 状态 |
 |---|---|---|
-| **A** | 仓库骨架：workspace、全部 crate 存根、LICENSE(GPLv3+插件例外)、CI(fmt/clippy/test × 3 OS)、Cargo.lock | ✅ CI 三平台绿（bba9c18） |
+| **A** | 仓库骨架：workspace、全部 crate 存根、CI(fmt/clippy/test × 3 OS)、Cargo.lock | ✅ CI 三平台绿（bba9c18） |
 | **B** | 移植三个无 Tauri 依赖 crate：protocol → audio → plugin（含原有单测） | ✅ 编译通过（测试路径修复后随 C 验证） |
 | **C** | 新建 `micyou-transport`：jitter/stream/stats/tcp/udp/mdns/adb/web + `TransportEvents` 解耦 trait + 单测 | ✅ 编译+测试通过 |
 | **D** | 新建 `micyou-core`：config/mode_lock/平台设备/audio_output/sound/AudioPipeline/PluginHost(无头)/ServerCore/日志 + 单测 | ✅ 编译通过 |
@@ -131,5 +131,5 @@
 | 依赖版本漂移（2026 年 crates.io） | 沿用原 Cargo.toml 的精确版本约束 + 提交 Cargo.lock |
 | ~~`ort`/ONNX 构建过重~~ | **已移除**：PureVox6/AEC7 静态编译为零依赖纯 Rust VM（`micyou-infer`），二进制自含模型，无需 onnxruntime 动态库（见 docs/pure-rust-inference.md）✅ |
 | opus-decoder 依赖 git patch | workspace 根部保留 `[patch.crates-io]` Rusopus |
-| GPL 传染 | 新仓库保持 GPL-3.0-or-later + MicYou Plugin Exception，文件头保留原版权并追加重构声明 |
+| 许可证 | 实验性仓库,暂未设定许可证：经上游版权持有人授权,派生代码的版权/许可头已全部移除（根目录无 LICENSE）；仅第三方模型文件保留其 MIT 声明（resources/LICENSE-*.txt） |
 | CI macOS/Windows 平台代码路径无法本地验证 | 平台特定代码尽量照搬原实现；矩阵覆盖三平台 |

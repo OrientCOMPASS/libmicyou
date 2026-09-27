@@ -1,12 +1,6 @@
 /*
  * libmicyou — micyou-gui frontend (original MicYou Vue UI).
- * Derived from MicYou <https://github.com/LanRhyme/MicYou>
  * commands/plugins.rs (open_plugin_window_impl).
- *
- * Copyright (C) 2026 LanRhyme (original MicYou window semantics)
- * Copyright (C) 2026 OrientCOMPASS (libmicyou port)
- *
- * GPL-3.0-or-later with the MicYou Plugin Exception. See LICENSE (repo root).
  */
 
 //! Runtime window creation owned by the shell.

@@ -146,6 +146,11 @@ git config user.email "orientcompass@users.noreply.github.com"
 
 ## 许可
 
-GPL-3.0-or-later，附 MicYou Plugin Exception (Version 1.0)，详见 [LICENSE](./LICENSE)。
-本项目派生自 [LanRhyme/MicYou](https://github.com/LanRhyme/MicYou)（Copyright (C) 2026 LanRhyme），
-重构部分 Copyright (C) 2026 OrientCOMPASS。
+**实验性仓库,代码暂未设定许可证。** 应上游版权持有人授权,派生代码的
+版权与 GPL 许可头已全部移除,根目录不再提供 LICENSE 文件。
+
+例外:随附的 PureVox6 / AEC7 模型(`crates/micyou-core/resources/*.onnx`
+及其编译产物 `crates/micyou-audio/src/assets/*.mcy`)为第三方作品,
+仍按 **MIT License (a2heng)** 分发,声明见
+[LICENSE-PureVox.txt](./crates/micyou-core/resources/LICENSE-PureVox.txt) 与
+[LICENSE-AEC7.txt](./crates/micyou-core/resources/LICENSE-AEC7.txt)。

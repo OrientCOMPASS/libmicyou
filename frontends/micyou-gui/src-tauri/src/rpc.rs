@@ -1,10 +1,4 @@
-/*
- * libmicyou — micyou-gui frontend (original MicYou Vue UI).
- *
- * Copyright (C) 2026 OrientCOMPASS (libmicyou port)
- *
- * GPL-3.0-or-later with the MicYou Plugin Exception. See LICENSE (repo root).
- */
+/* libmicyou — micyou-gui frontend (original MicYou Vue UI). */
 
 //! The single generic bridge command used by the webview adapter: every
 //! mapped backend call funnels through here as raw JSON-RPC (method + params

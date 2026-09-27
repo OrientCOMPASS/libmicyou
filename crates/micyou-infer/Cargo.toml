@@ -4,7 +4,6 @@ description = "MicYou pure-Rust inference VM for statically compiled MCYI model 
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
-license.workspace = true
 repository.workspace = true
 
 # Zero runtime dependencies on purpose: this crate is the ort/onnxruntime

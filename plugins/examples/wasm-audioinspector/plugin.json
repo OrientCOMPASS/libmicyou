@@ -10,7 +10,6 @@
   },
   "version": "1.0.0",
   "author": "MicYou",
-  "license": "GPL-3.0-only",
   "homepage": "https://github.com/MicYou-Dev/MicYou-Plugins",
   "repository": "https://github.com/MicYou-Dev/MicYou-Plugins",
   "runtime": "wasm",

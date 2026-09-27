@@ -1,10 +1,4 @@
-/*
- * libmicyou — headless, frontend-decoupled backend for MicYou.
- *
- * Copyright (C) 2026 OrientCOMPASS (libmicyou refactor)
- *
- * GPL-3.0-or-later with the MicYou Plugin Exception. See LICENSE.
- */
+/* libmicyou — headless, frontend-decoupled backend for MicYou. */
 
 //! UI delegation: the backend has no windows, so UI actions (opening plugin
 //! panels) are forwarded to attached graphical frontends as `uiRequest`

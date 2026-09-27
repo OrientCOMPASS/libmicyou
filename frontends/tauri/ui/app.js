@@ -2,7 +2,6 @@
  * libmicyou — Tauri 2 reference frontend logic.
  * Drives the full backend JSON-RPC surface through the generic
  * `backend_call` Tauri command + forwarded `backend-event`s.
- * Copyright (C) 2026 OrientCOMPASS — GPL-3.0-or-later + MicYou Plugin Exception.
  */
 "use strict";
 

@@ -2,7 +2,6 @@
 name = "micyou-example-native-soundpad"
 version = "1.0.0"
 edition = "2021"
-license = "GPL-3.0-only"
 description = "MicYou native plugin example: a soundpad with UI buttons and host audio playback"
 publish = false
 

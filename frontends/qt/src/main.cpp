@@ -1,8 +1,4 @@
-/*
- * libmicyou — Qt 6 reference frontend.
- * Copyright (C) 2026 OrientCOMPASS
- * GPL-3.0-or-later with the MicYou Plugin Exception.
- */
+/* libmicyou — Qt 6 reference frontend. */
 #include "mainwindow.h"
 
 #include <QApplication>

@@ -1,8 +1,4 @@
-/*
- * libmicyou — Qt 6 reference frontend.
- * Copyright (C) 2026 OrientCOMPASS
- * GPL-3.0-or-later with the MicYou Plugin Exception.
- */
+/* libmicyou — Qt 6 reference frontend. */
 #include "mainwindow.h"
 #include "session.h"
 
@@ -113,7 +109,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     helpMenu->addAction(QStringLiteral("关于(&A)"), this, [this] {
         QMessageBox::about(this, QStringLiteral("MicYou Qt 前端"),
                            QStringLiteral("libmicyou 后端参考前端（Qt Widgets）。\n"
-                                          "JSON-RPC over stdio · GPL-3.0 + 插件例外"));
+                                          "JSON-RPC over stdio"));
     });
     connect(actStart, &QAction::triggered, this, &MainWindow::doStart);
     connect(actStop, &QAction::triggered, this, &MainWindow::doStop);

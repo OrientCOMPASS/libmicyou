@@ -4,7 +4,6 @@ description = "MicYou frontend-backend contract: RPC method parameters/results a
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
-license.workspace = true
 repository.workspace = true
 
 [dependencies]
