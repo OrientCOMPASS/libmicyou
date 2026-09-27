@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
   "crates/micyou-protocol",
+  "crates/micyou-infer",
   "crates/micyou-audio",
   "crates/micyou-plugin",
   "crates/micyou-plugin/fixtures/native",
@@ -33,6 +34,7 @@ rust-version = "1.87"
 [workspace.dependencies]
 # Internal crates
 micyou-protocol = { path = "crates/micyou-protocol", version = "0.1.0" }
+micyou-infer = { path = "crates/micyou-infer", version = "0.1.0" }
 micyou-audio = { path = "crates/micyou-audio", version = "0.1.0" }
 micyou-plugin = { path = "crates/micyou-plugin", version = "0.1.0" }
 micyou-transport = { path = "crates/micyou-transport", version = "0.1.0" }
@@ -64,15 +66,7 @@ cpal = "0.15.3"
 rubato = "3.0.0"
 ringbuf = "0.3.3"
 nnnoiseless = "0.5.2"
-ort = { version = "=2.0.0-rc.13", default-features = false, features = [
-  "load-dynamic",
-  "tls-rustls",
-  "std",
-  "ndarray",
-  "api-17",
-] }
 rustfft = "6.4.1"
-ndarray = "0.17"
 opus-decoder = "0.1.1"
 
 # Network / discovery

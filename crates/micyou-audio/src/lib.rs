@@ -27,6 +27,3 @@ pub use dsp::{AudioDspSettings, DspProcessor, EqualizerConfig};
 pub use engine::{device_init_lock, AudioOutputManager, RubatoResampler};
 pub use loopback::LoopbackCapture;
 pub use mixer::{SoundEffect, SoundMixer};
-
-#[cfg(feature = "noise-suppression")]
-pub use dsp::init_ort_runtime;
